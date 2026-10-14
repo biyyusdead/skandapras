@@ -17,9 +17,9 @@ class SarprasSeeder extends Seeder
         // Kategori
         $categories = [
             ['name' => 'Elektronik', 'description' => 'Perangkat elektronik dan komputer'],
-            ['name' => 'Furnitur',   'description' => 'Meja, kursi, lemari'],
-            ['name' => 'ATK',        'description' => 'Alat tulis kantor'],
-            ['name' => 'Peralatan',  'description' => 'Peralatan praktik dan laboratorium'],
+            ['name' => 'Furnitur', 'description' => 'Meja, kursi, lemari'],
+            ['name' => 'ATK', 'description' => 'Alat tulis kantor'],
+            ['name' => 'Peralatan', 'description' => 'Peralatan praktik dan laboratorium'],
         ];
         foreach ($categories as $cat) {
             Category::updateOrCreate(['name' => $cat['name']], $cat);
@@ -27,33 +27,33 @@ class SarprasSeeder extends Seeder
 
         // Ruangan
         $rooms = [
-            ['name' => 'Lab RPL 1',           'code' => 'LAB-RPL-01', 'location' => 'Gedung A', 'floor' => '1', 'capacity' => 36, 'condition' => 'baik'],
-            ['name' => 'Lab Multimedia',      'code' => 'LAB-MM-01',  'location' => 'Gedung A', 'floor' => '1', 'capacity' => 36, 'condition' => 'baik'],
-            ['name' => 'Ruang Kelas XII RPL', 'code' => 'R-XII-RPL',  'location' => 'Gedung B', 'floor' => '2', 'capacity' => 32, 'condition' => 'rusak_ringan'],
+            ['name' => 'Lab RPL 1', 'code' => 'LAB-RPL-01', 'capacity' => 36, 'condition' => 'baik'],
+            ['name' => 'Lab Multimedia', 'code' => 'LAB-MM-01', 'capacity' => 36, 'condition' => 'baik'],
+            ['name' => 'Ruang Kelas XII RPL', 'code' => 'R-XII-RPL', 'capacity' => 32, 'condition' => 'rusak_ringan'],
         ];
         foreach ($rooms as $r) {
             Room::updateOrCreate(['code' => $r['code']], array_merge($r, [
                 'health_score' => 100,
-                'is_active'    => true,
+                'is_active' => true,
             ]));
         }
 
         // Barang master
         $items = [
-            ['name' => 'Papan Tulis Putih', 'code' => 'PT-120', 'category' => 'ATK',        'brand' => 'Sakura'],
-            ['name' => 'Kursi Lipat',       'code' => 'KR-LIP', 'category' => 'Furnitur',   'brand' => 'Chitose'],
-            ['name' => 'AC 1PK',            'code' => 'AC-1PK', 'category' => 'Elektronik', 'brand' => 'Daikin'],
-            ['name' => 'Proyektor',         'code' => 'PRY-001','category' => 'Elektronik', 'brand' => 'Epson'],
+            ['name' => 'Papan Tulis Putih', 'code' => 'PT-120', 'category' => 'ATK', 'brand' => 'Sakura'],
+            ['name' => 'Kursi Lipat', 'code' => 'KR-LIP', 'category' => 'Furnitur', 'brand' => 'Chitose'],
+            ['name' => 'AC 1PK', 'code' => 'AC-1PK', 'category' => 'Elektronik', 'brand' => 'Daikin'],
+            ['name' => 'Proyektor', 'code' => 'PRY-001', 'category' => 'Elektronik', 'brand' => 'Epson'],
         ];
         foreach ($items as $it) {
             $cat = Category::where('name', $it['category'])->first();
             Item::updateOrCreate(
                 ['code' => $it['code']],
                 [
-                    'name'        => $it['name'],
+                    'name' => $it['name'],
                     'category_id' => $cat->id,
-                    'brand'       => $it['brand'],
-                    'is_active'   => true,
+                    'brand' => $it['brand'],
+                    'is_active' => true,
                 ]
             );
         }
@@ -62,16 +62,16 @@ class SarprasSeeder extends Seeder
         $distributions = [
             // Papan Tulis di 3 ruangan
             ['item' => 'PT-120', 'room' => 'LAB-RPL-01', 'qty' => 2, 'condition' => 'baik'],
-            ['item' => 'PT-120', 'room' => 'LAB-MM-01',  'qty' => 1, 'condition' => 'baik'],
-            ['item' => 'PT-120', 'room' => 'R-XII-RPL',  'qty' => 1, 'condition' => 'rusak_ringan'],
+            ['item' => 'PT-120', 'room' => 'LAB-MM-01', 'qty' => 1, 'condition' => 'baik'],
+            ['item' => 'PT-120', 'room' => 'R-XII-RPL', 'qty' => 1, 'condition' => 'rusak_ringan'],
 
             // Kursi lipat
             ['item' => 'KR-LIP', 'room' => 'LAB-RPL-01', 'qty' => 36, 'condition' => 'baik'],
-            ['item' => 'KR-LIP', 'room' => 'R-XII-RPL',  'qty' => 32, 'condition' => 'baik'],
+            ['item' => 'KR-LIP', 'room' => 'R-XII-RPL', 'qty' => 32, 'condition' => 'baik'],
 
             // AC
             ['item' => 'AC-1PK', 'room' => 'LAB-RPL-01', 'qty' => 2, 'condition' => 'baik'],
-            ['item' => 'AC-1PK', 'room' => 'LAB-MM-01',  'qty' => 2, 'condition' => 'rusak_ringan'],
+            ['item' => 'AC-1PK', 'room' => 'LAB-MM-01', 'qty' => 2, 'condition' => 'rusak_ringan'],
 
             // Proyektor
             ['item' => 'PRY-001', 'room' => 'LAB-RPL-01', 'qty' => 1, 'condition' => 'baik'],
@@ -85,7 +85,7 @@ class SarprasSeeder extends Seeder
                 ItemRoom::updateOrCreate(
                     ['item_id' => $item->id, 'room_id' => $room->id],
                     [
-                        'quantity'  => $d['qty'],
+                        'quantity' => $d['qty'],
                         'condition' => $d['condition'],
                     ]
                 );
