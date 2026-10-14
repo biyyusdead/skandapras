@@ -225,6 +225,17 @@ const usedIcons = {
     Send: icons.Send,
 
     // ============================================
+    // SOCIAL MEDIA — TAMBAHAN
+    // ============================================
+    Linkedin: icons.Linkedin,
+    Instagram: icons.Instagram,
+    Youtube: icons.Youtube,
+    Facebook: icons.Facebook,
+    Twitter: icons.Twitter,
+    Github: icons.Github,
+    Send: icons.Send,
+
+    // ============================================
     // EDIT & ACTIONS — TAMBAHAN
     // ============================================
     Edit: icons.Edit,
@@ -252,7 +263,7 @@ const usedIcons = {
     Pencil: icons.Pencil,
     Trash2: icons.Trash2,
     MousePointerClick: icons.MousePointerClick,
-    };
+};
 
 let initialized = false;
 
