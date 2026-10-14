@@ -43,8 +43,6 @@ use App\Http\Controllers\Kepala;
         Route::resource('news',             Admin\NewsController::class)->except(['show']);
         Route::resource('alumni',           Admin\AlumniController::class)->except(['show']);
 
-        Route::post('hero-menus/bulk-action', [Admin\HeroMenuController::class, 'bulkAction'])->name('hero-menus.bulk-action');
-Route::resource('hero-menus', Admin\HeroMenuController::class)->except(['show']);
 
         Route::get('logs', [Admin\ActivityLogController::class, 'index'])->name('logs.index');
     });

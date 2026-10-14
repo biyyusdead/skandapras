@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Achievement;
 use App\Models\Alumni;
 use App\Models\Department;
-use App\Models\HeroMenu;
 use App\Models\News;
 use App\Models\Room;
 use App\Models\SchoolProfile;
@@ -40,7 +39,7 @@ class HomeController extends Controller
             'totalNews'         => $stats['news'],
             'totalTeachers'     => $stats['teachers'],
             'totalRooms'        => $stats['rooms'],
-            'heroMenus'         => HeroMenu::active()->get(),
+            
         ]);
     }
 }
