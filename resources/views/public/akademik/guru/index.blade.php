@@ -49,14 +49,6 @@
                            class="w-full rounded-xl border border-surface-200 py-3 pl-11 pr-4 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100">
                 </div>
 
-                <select name="competency"
-                        class="rounded-xl border border-surface-200 bg-white px-4 py-3 text-sm cursor-pointer focus:border-primary-500 focus:ring-2 focus:ring-primary-100">
-                    <option value="">Semua Kompetensi</option>
-                    @foreach ($competencies as $c)
-                        <option value="{{ $c }}" @selected(request('competency') === $c)>{{ $c }}</option>
-                    @endforeach
-                </select>
-
                 <button type="submit"
                         class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-700
                                px-5 py-3 text-sm font-medium text-white transition-all active:scale-95">
@@ -176,6 +168,12 @@
                     </div>
                 </div>
             @endforeach
+
+            @if ($teachers->hasPages())
+                <div class="mt-10 flex justify-center">
+                    {{ $teachers->links() }}
+                </div>
+            @endif
         </div>
     @endif
 

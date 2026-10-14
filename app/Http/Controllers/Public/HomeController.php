@@ -27,9 +27,6 @@ class HomeController extends Controller
             ];
         });
 
-        // ❌ JANGAN cache Model Eloquent (Department, Alumni, HeroMenu)
-        // Query langsung — cepat kok
-
         return view('public.home', [
             'school'            => SchoolProfile::current(),
             'departments'       => Department::active()->orderBy('name')->take(4)->get(),
@@ -39,7 +36,6 @@ class HomeController extends Controller
             'totalNews'         => $stats['news'],
             'totalTeachers'     => $stats['teachers'],
             'totalRooms'        => $stats['rooms'],
-            
         ]);
     }
 }
