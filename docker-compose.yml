@@ -23,12 +23,9 @@ services:
       DB_PASSWORD: "${DB_PASSWORD:-secret}"
       FILESYSTEM_DISK: public
     volumes:
-      - .:/var/www/html
-      - /var/www/html/vendor
-      - /var/www/html/node_modules
+      # Data persisten Laravel (upload, cache/framework, dan logs)
       - app_uploads:/var/www/html/storage/app/public
       - app_storage:/var/www/html/storage/framework
-      - app_public:/var/www/html/public
       - app_logs:/var/www/html/storage/logs
     networks:
       - dokploy-network
@@ -38,7 +35,6 @@ volumes:
   app_storage:
   app_logs:
   app_uploads:
-  app_public:
 
 networks:
   dokploy-network:
