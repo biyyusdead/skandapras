@@ -118,7 +118,6 @@ class ChatbotController extends Controller
             'sejarah'          => $this->historyContext(),
             'sambutan_kepsek'  => $this->principalMessageContext(),
             'berita'           => $this->newsContext($message),
-            'info_khusus'      => $this->specialInfoContext(),
             'peta_3d'          => $this->map3DContext(),           // ← BARU
             'fasilitas_unggulan'=> $this->featuredFacilitiesContext(), // ← BARU
         ];
@@ -180,7 +179,6 @@ class ChatbotController extends Controller
             }
 
             $lines = [];
-PET
             $lines[] = "Nama Sekolah: " . ($school->school_name ?? '-');
             $lines[] = "NPSN: " . ($school->npsn ?? '-');
             $lines[] = "NSS: " . ($school->nss ?? '-');
@@ -245,101 +243,89 @@ PET
 
     protected function map3DContext(): string
     {
-        return Cache::remember('chatbot_map3d_context', 600, function () {
-            // Info peta 3D
-            $lines = [];
-
-            $lines[] = "FITUR PETA INTERAKTIF 3D:";
-            $lines[] = "";
-            $lines[] = "Peta 3D menampilkan seluruh gedung dan lapangan SMK Negeri 2 Karanganyar dalam bentuk model 3 dimensi yang bisa diputar, di-zoom, dan diklik.";
-            $lines[] = "";
-            $lines[] = "Cara akses:";
-            $lines[] = "- Buka menu Sarpras -> Peta Sekolah";
-            $lines[] = "- Pilih tab 'Model 3D' di bagian atas";
-            $lines[] = "- Tunggu sampai model 3D muncul";
-            $lines[] = "";
-            $lines[] = "Cara pakai:";
-            $lines[] = "- Drag kiri: memutar kamera";
-            $lines[] = "- Drag kanan atau Shift + drag: menggeser kamera";
-            $lines[] = "- Scroll mouse atau cubit layar: zoom in / zoom out";
-            $lines[] = "- Klik gedung atau lapangan: melihat detail ruangan (nama, kondisi, kapasitas, fasilitas, foto)";
-            $lines[] = "- Label nama gedung muncul otomatis di atas setiap bangunan";
-            $lines[] = "";
-            $lines[] = "FITUR PENCARI RUTE:";
-            $lines[] = "- Pilih ruangan awal dan tujuan dari dropdown";
-            $lines[] = "- Klik 'Cari Rute' untuk melihat jalur";
-            $lines[] = "- Rute ditampilkan sebagai garis cyan di peta 3D";
-            $lines[] = "- Untuk rute antar lantai, akan lewat tangga dan ada penanda 'NAIK' atau 'TURUN'";
-            $lines[] = "- Kamera otomatis fokus ke tengah rute";
-            $lines[] = "";
-            $lines[] = "FITUR DAFTAR RUANGAN:";
-            $lines[] = "- Klik tombol 'Daftar Ruangan' di dalam peta 3D";
-            $lines[] = "- Semua ruangan ditampilkan dalam bentuk daftar";
-            $lines[] = "- Ada pencarian untuk cari ruangan cepat";
-            $lines[] = "- Klik nama ruangan untuk fokus kamera + lihat detail";
-            $lines[] = "";
-            $lines[] = "Peta 2D juga tersedia dengan tampilan denah dari atas, dengan marker warna sesuai kondisi ruangan (hijau = baik, kuning = rusak ringan, merah = rusak berat).";
-
-            return implode("\n", $lines);
-        });
+        $t = [];
+        $t[] = 'FITUR PETA INTERAKTIF 3D:';
+        $t[] = '';
+        $t[] = 'Peta 3D menampilkan seluruh gedung dan lapangan SMK Negeri 2 Karanganyar dalam bentuk model 3 dimensi.';
+        $t[] = '';
+        $t[] = 'Cara akses:';
+        $t[] = '- Buka menu Sarpras -> Peta Sekolah';
+        $t[] = '- Pilih tab Model 3D di bagian atas';
+        $t[] = '';
+        $t[] = 'Cara pakai:';
+        $t[] = '- Drag kiri: memutar kamera';
+        $t[] = '- Drag kanan atau Shift + drag: menggeser kamera';
+        $t[] = '- Scroll atau cubit: zoom in / zoom out';
+        $t[] = '- Klik gedung: melihat detail ruangan';
+        $t[] = '- Label nama gedung muncul otomatis di atas bangunan';
+        $t[] = '';
+        $t[] = 'FITUR PENCARI RUTE:';
+        $t[] = '- Pilih ruangan awal dan tujuan dari dropdown';
+        $t[] = '- Klik Cari Rute untuk melihat jalur';
+        $t[] = '- Rute ditampilkan sebagai garis cyan di peta 3D';
+        $t[] = '- Rute antar lantai akan lewat tangga dengan penanda NAIK atau TURUN';
+        $t[] = '';
+        $t[] = 'FITUR DAFTAR RUANGAN:';
+        $t[] = '- Klik tombol Daftar Ruangan di dalam peta 3D';
+        $t[] = '- Semua ruangan ditampilkan dalam bentuk daftar';
+        $t[] = '- Ada pencarian untuk cari ruangan cepat';
+        $t[] = '- Klik nama ruangan untuk fokus kamera + lihat detail';
+        $t[] = '';
+        $t[] = 'Peta 2D juga tersedia dengan marker warna sesuai kondisi ruangan: hijau baik, kuning rusak ringan, merah rusak berat.';
+        return implode("\n", $t);
     }
 
     protected function featuredFacilitiesContext(): string
     {
-        return Cache::remember('chatbot_facilities_context', 600, function () {
-            $lines = [];
-
-            $lines[] = "FASILITAS UNGGULAN SMK NEGERI 2 KARANGANYAR:";
-            $lines[] = "";
-
-            $lines[] = "1. LAPANGAN UTAMA (Sepak Bola & Atletik)";
-            $lines[] = "   Lokasi: sisi timur kampus";
-            $lines[] = "   Fasilitas: lapangan rumput sepak bola standar, lintasan lari/atletik, 2 gawang dengan jaring, tribun penonton, lampu sorot.";
-            $lines[] = "";
-            $lines[] = "2. LAPANGAN BASKET";
-            $lines[] = "   Fasilitas: lapangan hardcourt basket, 2 ring basket papan akrilik, marka garis standar.";
-            $lines[] = "";
-            $lines[] = "3. LAPANGAN BOLA VOLI";
-            $lines[] = "   Fasilitas: lapangan voli dengan tiang dan net standar PBVSI.";
-            $lines[] = "";
-            $lines[] = "4. LAPANGAN UPACARA (Lapangan Tengah)";
-            $lines[] = "   Lokasi: tengah kampus";
-            $lines[] = "   Fasilitas: tiang bendera merah putih, podium pembina upacara, sound system lapangan, marka paving baris-berbaris.";
-            $lines[] = "";
-            $lines[] = "5. MASJID AL-AMANAH";
-            $lines[] = "   Fasilitas: ruang utama ibadah ber-AC, tempat wudhu putra & putri, mimbar khutbah, sound system digital, kipas angin, rak Al-Quran.";
-            $lines[] = "";
-            $lines[] = "6. LAB RPL / PPLG";
-            $lines[] = "   Fasilitas: 36 unit PC high-end, jaringan gigabit, smart TV 65 inch, AC, server lokal untuk development.";
-            $lines[] = "";
-            $lines[] = "7. LAB CAD/CAM & MESIN CNC";
-            $lines[] = "   Fasilitas: mesin CNC milling & turning, workstation CAD/CAM, simulator kontroler Fanuc & Siemens.";
-            $lines[] = "";
-            $lines[] = "8. BENGKEL OTOMOTIF";
-            $lines[] = "   Fasilitas: two-post hydraulic car lift, engine stand EFI & diesel, scanner OBD-II, tire changer, wheel balancer.";
-            $lines[] = "";
-            $lines[] = "9. BENGKEL TEKSTIL";
-            $lines[] = "   Fasilitas: mesin tenun otomatis, ATBM tradisional, mesin pemintal benang, lab uji tarik serat, bak pencelupan & pewarnaan.";
-            $lines[] = "";
-            $lines[] = "10. PERPUSTAKAAN";
-            $lines[] = "    Fasilitas: koleksi 5000+ judul buku, katalog online OPAC, area baca lesehan, ruang diskusi ber-AC, WiFi, e-book.";
-            $lines[] = "";
-            $lines[] = "11. RUANG UKS";
-            $lines[] = "    Fasilitas: 3 tempat tidur pasien, kotak P3K lengkap, tensimeter digital, tabung oksigen, timbangan.";
-            $lines[] = "";
-            $lines[] = "12. KANTIN";
-            $lines[] = "    Fasilitas: stan makanan & minuman higienis, meja kursi bersama, wastafel, tempat sampah terpilah.";
-            $lines[] = "";
-            $lines[] = "13. KOPERASI SISWA";
-            $lines[] = "    Fasilitas: menjual alat tulis, seragam, snack, dan kebutuhan siswa.";
-            $lines[] = "";
-            $lines[] = "14. LAPANGAN TENIS-BASKET";
-            $lines[] = "    Fasilitas: lapangan multifungsi dengan garis tenis dan basket.";
-            $lines[] = "";
-            $lines[] = "Untuk melihat lokasi semua fasilitas, buka menu Sarpras -> Peta Sekolah, dan pilih tab Model 3D.";
-
-            return implode("\n", $lines);
-        });
+        $t = [];
+        $t[] = 'FASILITAS UNGGULAN SMK NEGERI 2 KARANGANYAR:';
+        $t[] = '';
+        $t[] = '1. LAPANGAN UTAMA - Sepak Bola & Atletik';
+        $t[] = '   Lokasi: sisi timur kampus';
+        $t[] = '   Fasilitas: lapangan rumput, lintasan lari, 2 gawang, tribun, lampu sorot.';
+        $t[] = '';
+        $t[] = '2. LAPANGAN BASKET';
+        $t[] = '   Fasilitas: hardcourt basket, 2 ring papan akrilik.';
+        $t[] = '';
+        $t[] = '3. LAPANGAN BOLA VOLI';
+        $t[] = '   Fasilitas: tiang dan net standar PBVSI.';
+        $t[] = '';
+        $t[] = '4. LAPANGAN UPACARA (Lapangan Tengah)';
+        $t[] = '   Lokasi: tengah kampus';
+        $t[] = '   Fasilitas: tiang bendera, podium, sound system, marka paving.';
+        $t[] = '';
+        $t[] = '5. MASJID AL-AMANAH';
+        $t[] = '   Fasilitas: ruang ibadah ber-AC, tempat wudhu, mimbar, sound system, rak Al-Quran.';
+        $t[] = '';
+        $t[] = '6. LAB RPL / PPLG';
+        $t[] = '   Fasilitas: 36 PC high-end, jaringan gigabit, smart TV 65 inch, AC, server lokal.';
+        $t[] = '';
+        $t[] = '7. LAB CAD/CAM & MESIN CNC';
+        $t[] = '   Fasilitas: mesin CNC milling & turning, workstation CAD/CAM, simulator Fanuc & Siemens.';
+        $t[] = '';
+        $t[] = '8. BENGKEL OTOMOTIF';
+        $t[] = '   Fasilitas: car lift, engine stand, scanner OBD-II, tire changer, wheel balancer.';
+        $t[] = '';
+        $t[] = '9. BENGKEL TEKSTIL';
+        $t[] = '   Fasilitas: mesin tenun, ATBM, mesin pemintal, lab uji tarik serat, bak pencelupan.';
+        $t[] = '';
+        $t[] = '10. PERPUSTAKAAN';
+        $t[] = '    Fasilitas: 5000+ buku, katalog OPAC, area baca, ruang diskusi, WiFi, e-book.';
+        $t[] = '';
+        $t[] = '11. RUANG UKS';
+        $t[] = '    Fasilitas: 3 tempat tidur, P3K, tensimeter, tabung oksigen, timbangan.';
+        $t[] = '';
+        $t[] = '12. KANTIN';
+        $t[] = '    Fasilitas: stan makanan higienis, meja kursi, wastafel, tempat sampah terpilah.';
+        $t[] = '';
+        $t[] = '13. KOPERASI SISWA';
+        $t[] = '    Fasilitas: menjual alat tulis, seragam, snack, kebutuhan siswa.';
+        $t[] = '';
+        $t[] = '14. LAPANGAN TENIS-BASKET';
+        $t[] = '    Fasilitas: lapangan multifungsi dengan garis tenis dan basket.';
+        $t[] = '';
+        $t[] = 'Lihat lokasi semua fasilitas di menu Sarpras -> Peta Sekolah -> tab Model 3D.';
+        return implode("\n", $t);
     }
 
     protected function newsContext(string $message): string
