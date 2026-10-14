@@ -24,7 +24,7 @@
     @stack('styles')
 </head>
 
-<body class="relative bg-surface-50 text-surface-800 font-sans antialiased">
+<body class="relative bg-surface-50 text-surface-800 font-sans antialiased pb-20 lg:pb-0">
 
     {{-- ============================================================ --}}
     {{-- GLOBAL DECORATIVE BACKGROUND --}}
@@ -833,6 +833,330 @@
         </button>
 
     </div>{{-- end content wrapper --}}
+
+        {{-- ═══════════════════════════════════════════════════════════ --}}
+    {{-- MOBILE BOTTOM NAVIGATION — hanya tampil < lg --}}
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    @php
+        $isHome = request()->routeIs('public.home');
+        $isPrestasi = request()->routeIs('public.kesiswaan.prestasi.*');
+    @endphp
+
+        <nav x-data="{ drawerOpen: false }"
+         class="lg:hidden fixed bottom-0 left-0 right-0 z-[90]
+                bg-white/95 backdrop-blur-md
+                border-t border-surface-200
+                shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.08)]"
+         style="padding-bottom: env(safe-area-inset-bottom, 0px);"
+         aria-label="Navigasi utama">
+
+        <div class="grid grid-cols-5 items-center h-16 relative">
+
+            {{-- 1. Beranda --}}
+            <a href="{{ url('/') }}"
+               class="flex flex-col items-center justify-center gap-1 h-full
+                      {{ $isHome ? 'text-primary-600' : 'text-surface-400' }}
+                      transition-colors duration-200">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Beranda</span>
+            </a>
+
+            {{-- 2. Berita --}}
+            <a href="{{ route('public.news.index') }}"
+               class="flex flex-col items-center justify-center gap-1 h-full
+                      {{ request()->routeIs('public.news.*') ? 'text-primary-600' : 'text-surface-400' }}
+                      transition-colors duration-200">
+                <i data-lucide="newspaper" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Berita</span>
+            </a>
+
+            {{-- 3. Chatbot (TENGAH) --}}
+            <div class="relative flex justify-center h-full">
+                <button type="button"
+                        id="bottom-chatbot-btn"
+                        @click="drawerOpen = false; window.dispatchEvent(new CustomEvent('open-chatbot'))"
+                        aria-label="Buka Chatbot"
+                        class="absolute -top-5 w-14 h-14 rounded-xl
+                               bg-white
+                               shadow-lg shadow-primary-500/40
+                               ring-4 ring-white
+                               flex items-center justify-center
+                               hover:scale-105 active:scale-95
+                               transition-transform duration-200 overflow-hidden p-0">
+                    <img src="{{ asset('assets/images/chatbot/chatbot.webp') }}"
+                         alt="Chatbot"
+                         class="w-full h-full object-cover block scale-125"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="w-full h-full hidden items-center justify-center bg-gradient-to-br from-primary-600 to-primary-800">
+                        <i data-lucide="message-circle" class="w-6 h-6 text-white"></i>
+                    </span>
+                </button>
+                <span class="absolute bottom-0 text-[10px] font-semibold text-surface-400">
+                    Tanya
+                </span>
+            </div>
+
+            {{-- 4. Prestasi --}}
+            <a href="{{ route('public.kesiswaan.prestasi.index') }}"
+               class="flex flex-col items-center justify-center gap-1 h-full
+                      {{ $isPrestasi ? 'text-primary-600' : 'text-surface-400' }}
+                      transition-colors duration-200">
+                <i data-lucide="trophy" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Prestasi</span>
+            </a>
+
+            {{-- 5. Peta --}}
+            <a href="{{ route('public.rooms.map') }}"
+               class="flex flex-col items-center justify-center gap-1 h-full
+                      {{ request()->routeIs('public.rooms.map') ? 'text-primary-600' : 'text-surface-400' }}
+                      transition-colors duration-200">
+                <i data-lucide="map-pin" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Peta</span>
+            </a>
+        </div>
+
+        {{-- ═══════════════════════════════════════════════════════ --}}
+        {{-- DRAWER "LAINNYA" — slide dari kanan --}}
+        {{-- ═══════════════════════════════════════════════════════ --}}
+        <div x-show="drawerOpen"
+             x-cloak
+             class="fixed inset-0 z-[95] lg:hidden">
+
+            {{-- Backdrop --}}
+            <div @click="drawerOpen = false"
+                 x-show="drawerOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="absolute inset-0 bg-black/50 backdrop-blur-sm">
+            </div>
+
+            {{-- Panel --}}
+            <div x-show="drawerOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="translate-x-full"
+                 x-transition:enter-end="translate-x-0"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="translate-x-0"
+                 x-transition:leave-end="translate-x-full"
+                 class="absolute right-0 top-0 bottom-0 w-[85%] max-w-sm
+                        bg-white shadow-2xl overflow-y-auto">
+
+                {{-- Header --}}
+                <div class="sticky top-0 z-10 bg-gradient-to-br from-primary-600 to-primary-800
+                            text-white px-5 py-5 pb-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            @php $drawerLogo = \App\Models\SchoolProfile::current()?->logo; @endphp
+                            @if ($drawerLogo)
+                                <img src="{{ asset('storage/' . $drawerLogo) }}"
+                                     class="h-10 w-auto object-contain">
+                            @else
+                                <img src="{{ asset('assets/images/logo/logo.webp') }}"
+                                     class="h-10 w-auto object-contain">
+                            @endif
+                            <div>
+                                <p class="text-sm font-bold">SMK Negeri 2</p>
+                                <p class="text-[10px] text-white/70 tracking-wider">KARANGANYAR</p>
+                            </div>
+                        </div>
+                        <button type="button"
+                                @click="drawerOpen = false"
+                                aria-label="Tutup menu"
+                                class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20
+                                       flex items-center justify-center transition-colors">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Menu list --}}
+                <div class="p-4 space-y-5">
+
+                    {{-- Tentang --}}
+                    <div>
+                        <p class="text-[11px] font-bold text-primary-600 tracking-widest uppercase mb-2 px-1">
+                            Tentang
+                        </p>
+                        <div class="space-y-0.5">
+                            <a href="{{ route('public.profile.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="info" class="w-4 h-4 text-primary-600"></i>
+                                Identitas Sekolah
+                            </a>
+                            <a href="{{ route('public.profile.sambutan') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="message-square" class="w-4 h-4 text-primary-600"></i>
+                                Sambutan Kepala Sekolah
+                            </a>
+                            <a href="{{ route('public.profile.sejarah') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="history" class="w-4 h-4 text-primary-600"></i>
+                                Sejarah Sekolah
+                            </a>
+                            <a href="{{ route('public.profile.struktur') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="network" class="w-4 h-4 text-primary-600"></i>
+                                Struktur Organisasi
+                            </a>
+                        </div>
+                    </div>
+
+                    {{-- Sarpras --}}
+                    <div>
+                        <p class="text-[11px] font-bold text-primary-600 tracking-widest uppercase mb-2 px-1">
+                            Sarpras
+                        </p>
+                        <div class="space-y-0.5">
+                            <a href="{{ route('public.rooms.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="door-open" class="w-4 h-4 text-primary-600"></i>
+                                Daftar Ruangan
+                            </a>
+                            <a href="{{ route('public.rooms.map') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-primary-600"></i>
+                                Peta Sekolah
+                            </a>
+                            <a href="{{ route('public.sarpras.pengaduan') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="alert-triangle" class="w-4 h-4 text-primary-600"></i>
+                                Buat Laporan
+                            </a>
+                        </div>
+                    </div>
+
+                    {{-- Akademik --}}
+                    <div>
+                        <p class="text-[11px] font-bold text-primary-600 tracking-widest uppercase mb-2 px-1">
+                            Akademik
+                        </p>
+                        <div class="space-y-0.5">
+                            <a href="{{ route('public.akademik.guru.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="users" class="w-4 h-4 text-primary-600"></i>
+                                Guru & Tenaga Kependidikan
+                            </a>
+                            <a href="{{ route('public.akademik.kompetensi.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="book-open" class="w-4 h-4 text-primary-600"></i>
+                                Kompetensi Keahlian
+                            </a>
+                            <a href="{{ route('public.akademik.spmb.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="clipboard-check" class="w-4 h-4 text-primary-600"></i>
+                                SPMB
+                            </a>
+                            <a href="{{ route('public.akademik.produk.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="package" class="w-4 h-4 text-primary-600"></i>
+                                Produk Unggulan
+                            </a>
+                            <a href="{{ route('public.akademik.alumni.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="graduation-cap" class="w-4 h-4 text-primary-600"></i>
+                                Alumni
+                            </a>
+                        </div>
+                    </div>
+
+                    {{-- Kesiswaan --}}
+                    <div>
+                        <p class="text-[11px] font-bold text-primary-600 tracking-widest uppercase mb-2 px-1">
+                            Kesiswaan
+                        </p>
+                        <div class="space-y-0.5">
+                            <a href="{{ route('public.kesiswaan.ekstrakurikuler.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-primary-600"></i>
+                                Ekstrakurikuler
+                            </a>
+                            <a href="{{ route('public.kesiswaan.tata-tertib.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="file-text" class="w-4 h-4 text-primary-600"></i>
+                                Tata Tertib
+                            </a>
+                            <a href="{{ route('public.kesiswaan.pkl-bkk.index') }}"
+                               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-surface-700
+                                      hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                                <i data-lucide="briefcase" class="w-4 h-4 text-primary-600"></i>
+                                BKK & PKL
+                            </a>
+                        </div>
+                    </div>
+
+                    {{-- Berita --}}
+                    <a href="{{ route('public.news.index') }}"
+                       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-surface-900
+                              bg-surface-50 hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                        <i data-lucide="newspaper" class="w-4 h-4 text-primary-600"></i>
+                        Berita
+                    </a>
+
+                    {{-- CTA --}}
+                    <div class="pt-3 border-t border-surface-200 space-y-2">
+                        @guest
+                            <a href="{{ route('public.akademik.spmb.index') }}"
+                               class="flex items-center justify-center gap-2 w-full py-3
+                                      bg-gradient-to-br from-primary-600 to-primary-800
+                                      text-white text-sm font-semibold rounded-xl
+                                      shadow-md hover:shadow-lg transition-all">
+                                <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                                Daftar SPMB
+                            </a>
+                        @endguest
+
+                        @auth
+                            @php
+                                $drawerDashboardRoute = match (auth()->user()->role->value) {
+                                    'admin' => 'admin.dashboard',
+                                    'waka_sarpras' => 'waka.dashboard',
+                                    'kepala_sekolah' => 'kepala.dashboard',
+                                    'pengguna_ruangan' => 'pengguna.dashboard',
+                                    default => 'public.home',
+                                };
+                            @endphp
+                            <a href="{{ route($drawerDashboardRoute) }}"
+                               class="flex items-center justify-center gap-2 w-full py-3
+                                      bg-gradient-to-br from-primary-600 to-primary-800
+                                      text-white text-sm font-semibold rounded-xl
+                                      shadow-md hover:shadow-lg transition-all">
+                                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                                Dashboard
+                            </a>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit"
+                                        class="flex items-center justify-center gap-2 w-full py-3
+                                               border border-red-200 text-red-600 text-sm font-semibold rounded-xl
+                                               hover:bg-red-50 transition-colors">
+                                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                                    Logout
+                                </button>
+                            </form>
+                        @endauth
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
 
     <x-chatbot />
     {{-- ═══════════════════════════════════════════════════════════ --}}

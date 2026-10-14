@@ -54,8 +54,32 @@
 <section class="relative bg-surface-50 py-12">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
 
-        {{-- FILTER & SEARCH --}}
-        <div class="bg-white rounded-2xl border border-surface-200 shadow-soft p-4 md:p-5 space-y-4">
+        {{-- VIEW TOGGLE — selalu tampil di atas --}}
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="inline-flex bg-surface-100 p-1 rounded-xl">
+                <button type="button" data-view="map"
+                        class="view-toggle-btn px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 inline-flex items-center gap-1.5 bg-white text-primary-600 shadow-sm">
+                    <i data-lucide="map" class="w-3.5 h-3.5"></i>
+                    Peta 2D
+                </button>
+                <button type="button" data-view="3d"
+                        class="view-toggle-btn px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 inline-flex items-center gap-1.5 text-surface-500 hover:text-surface-700">
+                    <i data-lucide="box" class="w-3.5 h-3.5"></i>
+                    Model 3D
+                </button>
+            </div>
+
+            {{-- CTA kecil ke menu daftar ruangan (opsional) --}}
+            <a href="{{ route('public.rooms.index') }}"
+               class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-primary-600 hover:bg-primary-50 transition-colors">
+                <i data-lucide="list" class="w-3.5 h-3.5"></i>
+                Daftar Ruangan Lengkap
+                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+            </a>
+        </div>
+
+        {{-- FILTER & SEARCH — hanya di view 2D --}}
+        <div id="search-filter-bar" class="bg-white rounded-2xl border border-surface-200 shadow-soft p-4 md:p-5 space-y-4">
             <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
                 {{-- Search --}}
                 <div class="relative flex-1 max-w-md">
@@ -71,44 +95,10 @@
                         <i data-lucide="x" class="w-3 h-3"></i>
                     </button>
                 </div>
-
-                {{-- View Toggle (2D, 3D, Daftar) --}}
-                <div class="inline-flex bg-surface-100 p-1 rounded-xl self-start sm:self-auto">
-                    <button type="button" data-view="map"
-                            class="view-toggle-btn px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 inline-flex items-center gap-1.5 bg-white text-primary-600 shadow-sm">
-                        <i data-lucide="map" class="w-3.5 h-3.5"></i>
-                        Peta 2D
-                    </button>
-                    <button type="button" data-view="3d"
-                            class="view-toggle-btn px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 inline-flex items-center gap-1.5 text-surface-500 hover:text-surface-700">
-                        <i data-lucide="box" class="w-3.5 h-3.5"></i>
-                        Model 3D
-                    </button>
-                    <button type="button" data-view="list"
-                            class="view-toggle-btn px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 inline-flex items-center gap-1.5 text-surface-500 hover:text-surface-700">
-                        <i data-lucide="list" class="w-3.5 h-3.5"></i>
-                        Daftar
-                    </button>
-                </div>
             </div>
 
             {{-- Filters --}}
             <div class="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between pt-4 border-t border-surface-100">
-                @if ($floors->isNotEmpty())
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-[10px] font-bold text-surface-400 uppercase tracking-wider">Lantai:</span>
-                        <a href="{{ request()->fullUrlWithQuery(['floor' => null]) }}"
-                           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ !$floor ? 'bg-primary-600 text-white shadow-sm' : 'bg-surface-100 text-surface-600 hover:bg-surface-200' }}">
-                            Semua
-                        </a>
-                        @foreach ($floors as $f)
-                            <a href="{{ request()->fullUrlWithQuery(['floor' => $f]) }}"
-                               class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ $floor == $f ? 'bg-primary-600 text-white shadow-sm' : 'bg-surface-100 text-surface-600 hover:bg-surface-200' }}">
-                                Lantai {{ $f }}
-                            </a>
-                        @endforeach
-                    </div>
-                @endif
 
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-[10px] font-bold text-surface-400 uppercase tracking-wider">Kondisi:</span>
@@ -230,14 +220,64 @@
         {{-- ============================================================ --}}
         {{-- VIEW: 3D MODEL --}}
         {{-- ============================================================ --}}
-        <div id="view-3d" class="view-container hidden">
-            <div class="bg-white rounded-2xl border border-surface-200 shadow-lg p-4 sm:p-6">
-                <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div id="view-3d" class="view-container hidden space-y-4">
+
+            {{-- Card: Pencari Rute (DI LUAR container 3D) --}}
+            <div class="bg-white rounded-2xl border border-surface-200 shadow-lg p-4 sm:p-5">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-600 flex items-center justify-center">
+                        <i data-lucide="route" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-surface-900">Pencari Rute</h3>
+                        <p class="text-[11px] text-surface-500">Cari jalur dari satu ruangan ke ruangan lain</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 sm:gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-surface-500 uppercase tracking-wider mb-1">Dari</label>
+                        <select id="route-from" class="w-full px-3 py-2.5 text-sm rounded-lg border border-surface-300 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition">
+                            <option value="">— Pilih ruangan awal —</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-surface-500 uppercase tracking-wider mb-1">Ke</label>
+                        <select id="route-to" class="w-full px-3 py-2.5 text-sm rounded-lg border border-surface-300 bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition">
+                            <option value="">— Pilih ruangan tujuan —</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2 items-end">
+                        <button type="button" id="route-go"
+                                class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-semibold transition shadow-sm">
+                            <i data-lucide="navigation" class="w-4 h-4"></i>
+                            <span class="sm:hidden lg:inline">Cari</span>
+                            <span class="hidden sm:inline lg:hidden">Cari Rute</span>
+                        </button>
+                        <button type="button" id="route-clear"
+                                class="px-4 py-2.5 rounded-lg bg-surface-100 hover:bg-surface-200 text-surface-700 text-sm font-semibold transition">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <div id="route-panel" class="hidden mt-3 p-3 bg-cyan-50/50 rounded-lg border border-cyan-200">
+                    <div id="route-steps"></div>
+                </div>
+            </div>
+
+            {{-- Card: Container 3D (dengan overlay Daftar Ruangan) --}}
+            <div class="bg-white rounded-2xl border border-surface-200 shadow-lg p-4 sm:p-5">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
                     <div class="flex items-center gap-2 text-xs text-surface-500">
                         <i data-lucide="orbit" class="w-3.5 h-3.5 text-primary-600"></i>
-                        <span>Drag kiri: Putar kamera · Klik kanan/Shift: Geser · Scroll: Zoom · Klik gedung: Detail</span>
+                        <span>Model 3D Interaktif</span>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button type="button" id="btn-toggle-labels" class="px-3 h-8 rounded-lg bg-surface-100 hover:bg-surface-200 text-xs font-semibold text-surface-700 transition inline-flex items-center gap-1.5">
+                            <i data-lucide="tag" class="w-3.5 h-3.5"></i>
+                            Sembunyikan Label
+                        </button>
                         <button type="button" id="btn-3d-rotate" class="px-3 h-8 rounded-lg bg-surface-100 hover:bg-surface-200 text-xs font-semibold text-surface-700 transition">
                             Putar otomatis: mati
                         </button>
@@ -247,35 +287,46 @@
                     </div>
                 </div>
 
-                {{-- Toolbar Rute --}}
-                <div class="mb-4 bg-gradient-to-br from-cyan-50 to-white rounded-xl border border-cyan-200 p-4">
-                    <div class="flex items-center gap-2 mb-3">
-                        <i data-lucide="route" class="w-4 h-4 text-cyan-600"></i>
-                        <h3 class="text-sm font-bold text-cyan-900">Pencari Rute</h3>
-                    </div>
-                    <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-                        <select id="route-from" class="flex-1 px-3 py-2 text-sm rounded-lg border border-surface-300 bg-white">
-                            <option value="">— Pilih ruangan awal —</option>
-                        </select>
-                        <i data-lucide="arrow-right" class="w-4 h-4 text-surface-400 self-center hidden sm:block"></i>
-                        <select id="route-to" class="flex-1 px-3 py-2 text-sm rounded-lg border border-surface-300 bg-white">
-                            <option value="">— Pilih ruangan tujuan —</option>
-                        </select>
-                        <button type="button" id="route-go" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-semibold transition">
-                            Cari Rute
-                        </button>
-                        <button type="button" id="route-clear" class="px-4 py-2 rounded-lg bg-surface-100 hover:bg-surface-200 text-surface-700 text-sm font-semibold transition">
-                            Bersihkan
-                        </button>
-                    </div>
-                    <div id="route-panel" class="hidden mt-3 p-3 bg-white rounded-lg border border-cyan-200">
-                        <div id="route-steps"></div>
-                    </div>
-                </div>
-
                 <div id="three-container" class="relative w-full rounded-xl overflow-hidden bg-slate-900 border border-surface-200" style="height: 640px;">
-                    <div class="absolute bottom-3 left-3 pointer-events-none z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-surface-200 text-[11px] text-surface-700 font-medium shadow-sm">
-                        Model 3D Interaktif Denah SMK Negeri 2 Karanganyar
+
+                    {{-- OVERLAY: Tombol Daftar Ruangan (kanan atas) --}}
+                    <div class="absolute top-3 right-3 z-10">
+                        <button type="button" id="rooms-list-toggle"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/95 backdrop-blur-md border border-surface-200 shadow-lg text-xs font-semibold text-surface-800 hover:bg-white transition">
+                            <i data-lucide="list" class="w-3.5 h-3.5 text-primary-600"></i>
+                            Daftar Ruangan
+                        </button>
+                    </div>
+
+                    {{-- OVERLAY: Panel Daftar Ruangan (kanan atas, muncul saat tombol diklik) --}}
+                    <div id="rooms-list-panel" class="hidden absolute top-16 right-3 z-20 w-[280px] max-h-[calc(100%-80px)] bg-white/98 backdrop-blur-md rounded-xl border border-surface-200 shadow-2xl overflow-hidden flex flex-col">
+
+                        {{-- Header --}}
+                        <div class="flex items-center justify-between px-3 py-2 border-b border-surface-200 bg-gradient-to-r from-primary-50 to-white shrink-0">
+                            <div class="flex items-center gap-1.5">
+                                <i data-lucide="building-2" class="w-3.5 h-3.5 text-primary-600"></i>
+                                <span class="text-xs font-bold text-surface-800">Daftar Ruangan</span>
+                            </div>
+                            <button type="button" id="rooms-list-close" class="w-6 h-6 rounded-md hover:bg-surface-100 flex items-center justify-center text-surface-500 transition">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+
+                        {{-- Search --}}
+                        <div class="px-3 py-2 border-b border-surface-100 shrink-0">
+                            <input type="text" id="rooms-list-search" placeholder="Cari ruangan..."
+                                   class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-surface-200 bg-surface-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 outline-none transition">
+                        </div>
+
+                        {{-- List --}}
+                        <div id="rooms-list-items" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+                    </div>
+
+                    {{-- Badge label count --}}
+                    <div class="absolute bottom-3 left-3 pointer-events-none z-10">
+                        <div class="bg-white/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-surface-200 text-[10px] text-surface-700 font-medium shadow-sm">
+                            <span id="tooltip-count">0</span> label aktif
+                        </div>
                     </div>
                 </div>
             </div>
@@ -432,11 +483,6 @@
 
         <div class="flex-1 overflow-y-auto p-5 space-y-4">
             <div class="grid grid-cols-3 gap-3">
-                <div class="bg-surface-50 rounded-xl p-3 text-center">
-                    <i data-lucide="layers" class="w-4 h-4 text-primary-600 mx-auto mb-1"></i>
-                    <p class="text-[10px] text-surface-500">Lantai</p>
-                    <p id="room-modal-floor" class="text-sm font-bold text-surface-900">—</p>
-                </div>
                 <div class="bg-surface-50 rounded-xl p-3 text-center">
                     <i data-lucide="users" class="w-4 h-4 text-primary-600 mx-auto mb-1"></i>
                     <p class="text-[10px] text-surface-500">Kapasitas</p>

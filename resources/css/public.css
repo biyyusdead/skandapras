@@ -68,3 +68,27 @@ html { background-color: #FAFAF7; }
 .animate-fade-in-up        { animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .stagger-2                 { animation-delay: 0.15s; }
 
+   /* Bottom nav — sembunyikan scrollbar, biar rapi */
+    nav[aria-label="Navigasi utama"] {
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    nav[aria-label="Navigasi utama"] a,
+    nav[aria-label="Navigasi utama"] button {
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+    }
+    
+    /* Safe area support untuk iPhone notch */
+    @supports (padding: env(safe-area-inset-bottom)) {
+        nav[aria-label="Navigasi utama"] {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    }
+    
+    /* Cegah scroll bawah hilang di iOS saat keyboard muncul */
+    @media (max-width: 1023px) {
+        body {
+            overscroll-behavior-y: none;
+        }
+    }

@@ -16,7 +16,7 @@ class AchievementController extends Controller
             ->when($request->category, fn ($q, $c) => $q->where('category', $c))
             ->when($request->year, fn ($q, $y) => $q->whereYear('achievement_date', $y))
             ->latest('achievement_date')
-            ->paginate(12)
+            ->paginate(8)
             ->withQueryString();
 
         $categories = Achievement::distinct()->whereNotNull('category')->orderBy('category')->pluck('category');

@@ -57,7 +57,7 @@
                     {{-- LEFT --}}
                     <div class="animate-fade-in-up">
                         <h1
-                            class="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-surface-900 tracking-tight">
+                            class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-surface-900 tracking-tight">
                             SMK Negeri 2<br>
                             <span class="bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
                                 Karanganyar
@@ -154,25 +154,23 @@
             </div>
         </section>
 
-        {{-- ============================================================ --}}
+                {{-- ============================================================ --}}
         {{-- KENAPA HARUS SEKOLAH DI SINI? — SWIPER --}}
         {{-- ============================================================ --}}
         <section class="relative py-20 md:py-28 overflow-hidden bg-surface-50">
 
-            {{-- Pola Titik Halus di Background (Memberikan tekstur natural) --}}
+            {{-- Pola Titik Halus di Background --}}
             <div class="absolute inset-0 pointer-events-none opacity-[0.03]"
                 style="background-image: radial-gradient(circle, #000 1px, transparent 1px); background-size: 24px 24px;">
             </div>
 
             {{-- Aksen Cahaya di Pojok --}}
-            <div
-                class="absolute top-0 right-0 w-1/2 h-1/2 bg-gradient-to-b from-primary-100/50 to-transparent blur-3xl pointer-events-none">
-            </div>
+            <div class="absolute top-0 right-0 w-1/2 h-1/2 bg-gradient-to-b from-primary-100/50 to-transparent blur-3xl pointer-events-none"></div>
 
             <div class="relative z-10 max-w-6xl mx-auto px-4 w-full">
 
                 {{-- Header --}}
-                <div class="text-center mb-16 md:mb-20">
+                <div class="text-center mb-12 md:mb-16">
                     <span class="inline-block text-[11px] font-bold text-primary-600 tracking-[0.2em] uppercase mb-3">
                         Keunggulan Kami
                     </span>
@@ -189,8 +187,7 @@
                         [
                             'icon' => 'trophy',
                             'title' => 'Berprestasi',
-                            'desc' =>
-                                'Siswa kami rutin menorehkan prestasi di tingkat kabupaten, provinsi, nasional, bahkan internasional.',
+                            'desc' => 'Siswa kami rutin menorehkan prestasi di tingkat kabupaten, provinsi, nasional, bahkan internasional.',
                             'route' => route('public.kesiswaan.prestasi.index'),
                             'color' => '#f59e0b',
                             'bg-light' => '#FEF3C7',
@@ -206,8 +203,7 @@
                         [
                             'icon' => 'briefcase',
                             'title' => 'Siap Kerja',
-                            'desc' =>
-                                'Kerja sama dengan berbagai industri untuk PKL, BKK, dan penyaluran kerja lulusan.',
+                            'desc' => 'Kerja sama dengan berbagai industri untuk PKL, BKK, dan penyaluran kerja lulusan.',
                             'route' => route('public.kesiswaan.pkl-bkk.index'),
                             'color' => '#0EA5E9',
                             'bg-light' => '#E5F6FD',
@@ -231,8 +227,7 @@
                         [
                             'icon' => 'compass',
                             'title' => 'Panduan SPMB',
-                            'desc' =>
-                                'Informasi lengkap penerimaan siswa baru: jalur, syarat, jadwal, dan tata cara pendaftaran.',
+                            'desc' => 'Informasi lengkap penerimaan siswa baru: jalur, syarat, jadwal, dan tata cara pendaftaran.',
                             'route' => route('public.akademik.spmb.panduan'),
                             'color' => '#F97316',
                             'bg-light' => '#FDF0E7',
@@ -240,21 +235,59 @@
                     ];
                 @endphp
 
-                {{-- Grid Layout (Menggunakan Inline CSS agar anti-gagal) --}}
-                <div
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; width: 100%;">
-                    @foreach ($reasons as $index => $r)
-                        <a href="{{ $r['route'] }}" style="min-width: 0;"
+                {{-- Mobile: Swiper --}}
+                <div class="md:hidden">
+                    <div class="swiper reasons-swiper !overflow-visible !pb-12">
+                        <div class="swiper-wrapper">
+                            @foreach ($reasons as $r)
+                                <div class="swiper-slide !h-auto">
+                                    <a href="{{ $r['route'] }}"
+                                        class="group relative flex flex-col h-full bg-white rounded-2xl p-6
+                                        border border-surface-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]
+                                        overflow-hidden">
+
+                                        <div class="absolute top-0 left-0 w-full h-1"
+                                            style="background-color: {{ $r['color'] }};"></div>
+
+                                        <div class="relative w-12 h-12 flex items-center justify-center rounded-xl mb-5"
+                                            style="background: {{ $r['bg-light'] }};">
+                                            <i data-lucide="{{ $r['icon'] }}" class="w-6 h-6"
+                                                style="color: {{ $r['color'] }};"></i>
+                                        </div>
+
+                                        <h3 class="relative text-lg font-bold text-surface-900 leading-tight mb-2">
+                                            {{ $r['title'] }}
+                                        </h3>
+                                        <p class="relative text-sm text-surface-500 leading-relaxed mb-6 flex-1">
+                                            {{ $r['desc'] }}
+                                        </p>
+
+                                        <div class="relative mt-auto flex items-center gap-3 text-sm font-bold"
+                                            style="color: {{ $r['color'] }};">
+                                            <span>Selengkapnya</span>
+                                            <div class="flex-1 h-px bg-current opacity-20"></div>
+                                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                        </div>
+                                    </a>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="swiper-pagination reasons-pagination !-bottom-2"></div>
+                    </div>
+                </div>
+
+                {{-- Desktop: Grid --}}
+                <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @foreach ($reasons as $r)
+                        <a href="{{ $r['route'] }}"
                             class="group relative flex flex-col h-full bg-white rounded-2xl p-8
                             border border-surface-200/80 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]
                             transition-all duration-500 hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.08)]
-                            hover:-translate-y-1 overflow-hidden w-full">
+                            hover:-translate-y-1 overflow-hidden">
 
-                            {{-- Garis Aksen Atas (Muncul saat Hover) --}}
                             <div class="absolute top-0 left-0 w-full h-1 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                                 style="background-color: {{ $r['color'] }};"></div>
 
-                            {{-- Icon (Tanpa Kotak Pastel Generik, Hanya Ikon Bersih) --}}
                             <div class="relative w-12 h-12 flex items-center justify-center rounded-xl mb-6
                                     transition-transform duration-500 group-hover:scale-110"
                                 style="background: {{ $r['bg-light'] }};">
@@ -262,24 +295,19 @@
                                     style="color: {{ $r['color'] }};"></i>
                             </div>
 
-                            {{-- Konten --}}
-                            <h3
-                                class="relative text-xl font-bold text-surface-900 leading-tight mb-3
+                            <h3 class="relative text-xl font-bold text-surface-900 leading-tight mb-3
                                 group-hover:text-primary-700 transition-colors">
                                 {{ $r['title'] }}
                             </h3>
-                            <p class="relative text-sm text-surface-500 leading-relaxed mb-8 flex-1 line-clamp-3">
+                            <p class="relative text-sm text-surface-500 leading-relaxed mb-8 flex-1">
                                 {{ $r['desc'] }}
                             </p>
 
-                            {{-- CTA "Selengkapnya" di Kiri Bawah dengan Garis Editorial --}}
                             <div class="relative mt-auto flex items-center gap-3 text-sm font-bold
                                     transition-all duration-300"
                                 style="color: {{ $r['color'] }};">
                                 <span>Selengkapnya</span>
-                                <div
-                                    class="flex-1 h-px bg-current opacity-20 transition-all duration-500 group-hover:opacity-100">
-                                </div>
+                                <div class="flex-1 h-px bg-current opacity-20 transition-all duration-500 group-hover:opacity-100"></div>
                                 <i data-lucide="arrow-right"
                                     class="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"></i>
                             </div>
@@ -289,7 +317,7 @@
             </div>
         </section>
 
-        {{-- ============================================================ --}}
+                {{-- ============================================================ --}}
         {{-- KOMPETENSI KEAHLIAN — SWIPER --}}
         {{-- ============================================================ --}}
         <section class="relative py-12 md:py-16 overflow-hidden">
@@ -330,35 +358,97 @@
                     ];
                 @endphp
 
-                {{-- Grid Layout: 1 kolom di mobile, 2 di tablet, 4 di desktop --}}
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-5">
+                {{-- Mobile: Swiper --}}
+                <div class="md:hidden">
+                    <div class="swiper departments-swiper !overflow-visible !pb-12">
+                        <div class="swiper-wrapper">
+                            @forelse ($departments as $dept)
+                                @php $c = $palette[$loop->index % count($palette)]; @endphp
+                                <div class="swiper-slide !h-auto">
+                                    <a href="{{ route('public.akademik.kompetensi.show', $dept) }}"
+                                        class="group relative flex flex-col h-full">
+
+                                        <div class="relative h-[150px] flex items-end justify-center z-10 px-4">
+                                            @if ($dept->image)
+                                                <img src="{{ asset('storage/' . $dept->image) }}" alt="{{ $dept->name }}"
+                                                    loading="lazy" width="160" height="160"
+                                                    class="max-h-[140px] max-w-full object-contain drop-shadow-xl">
+                                            @else
+                                                <div class="w-[110px] h-[110px] rounded-3xl flex items-center justify-center shadow-lg"
+                                                    style="background: linear-gradient(135deg, {{ $c['light'] }}, {{ $c['bg'] }}20);">
+                                                    <i data-lucide="{{ $c['icon'] }}" class="w-14 h-14"
+                                                        style="color: {{ $c['bg'] }};"></i>
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                        <div class="relative rounded-3xl -mt-8 pt-12 pb-6 px-5 flex-1 flex flex-col
+                                            text-white overflow-hidden"
+                                            style="background: linear-gradient(135deg, {{ $c['bg'] }}, {{ $c['bg'] }}dd);">
+
+                                            <div class="absolute inset-0 rounded-3xl opacity-[0.08] pointer-events-none"
+                                                style="background-image: radial-gradient(circle at 20% 20%, white 1px, transparent 1px); background-size: 20px 20px;"></div>
+
+                                            <div class="relative flex-1 flex flex-col">
+                                                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+                                                    bg-white/20 backdrop-blur-sm text-[10px] font-bold uppercase tracking-widest mb-3 self-start">
+                                                    {{ $dept->code }}
+                                                </div>
+
+                                                <h3 class="text-base font-bold leading-tight line-clamp-2">
+                                                    {{ $dept->name }}</h3>
+
+                                                <p class="text-xs leading-relaxed mt-3 opacity-90 line-clamp-3">
+                                                    {{ $dept->description }}
+                                                </p>
+
+                                                <div class="mt-auto pt-5 inline-flex items-center gap-1.5 text-xs font-bold
+                                                    underline decoration-white/40">
+                                                    Selengkapnya
+                                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @empty
+                                <div class="swiper-slide text-center py-12 text-surface-400">
+                                    <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                                    <p>Belum ada data jurusan.</p>
+                                </div>
+                            @endforelse
+                        </div>
+                        <div class="swiper-pagination departments-pagination !-bottom-2"></div>
+                    </div>
+                </div>
+
+                {{-- Desktop: Grid --}}
+                <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-5">
                     @forelse ($departments as $dept)
                         @php $c = $palette[$loop->index % count($palette)]; @endphp
 
                         <a href="{{ route('public.akademik.kompetensi.show', $dept) }}"
                             class="group relative flex flex-col h-full">
 
-                            {{-- Gambar/Icon --}}
-                            <div class="relative h-[150px] sm:h-[170px] flex items-end justify-center z-10 px-4">
+                            <div class="relative h-[170px] flex items-end justify-center z-10 px-4">
                                 @if ($dept->image)
                                     <img src="{{ asset('storage/' . $dept->image) }}" alt="{{ $dept->name }}"
                                         loading="lazy" width="160" height="160"
-                                        class="max-h-[140px] sm:max-h-[160px] max-w-full object-contain drop-shadow-xl
+                                        class="max-h-[160px] max-w-full object-contain drop-shadow-xl
                                         transition-all duration-500 ease-smooth
                                         group-hover:-translate-y-3 group-hover:scale-105">
                                 @else
-                                    <div class="w-[110px] sm:w-[130px] h-[110px] sm:h-[130px] rounded-3xl flex items-center justify-center
+                                    <div class="w-[130px] h-[130px] rounded-3xl flex items-center justify-center
                                         shadow-lg transition-all duration-500 ease-smooth
                                         group-hover:-translate-y-3 group-hover:scale-105"
                                         style="background: linear-gradient(135deg, {{ $c['light'] }}, {{ $c['bg'] }}20);">
-                                        <i data-lucide="{{ $c['icon'] }}" class="w-14 h-14 sm:w-16 sm:h-16"
+                                        <i data-lucide="{{ $c['icon'] }}" class="w-16 h-16"
                                             style="color: {{ $c['bg'] }};"></i>
                                     </div>
                                 @endif
                             </div>
 
-                            {{-- Card Content --}}
-                            <div class="relative rounded-3xl -mt-8 pt-12 sm:pt-14 pb-6 px-4 sm:px-5 flex-1 flex flex-col
+                            <div class="relative rounded-3xl -mt-8 pt-14 pb-6 px-5 flex-1 flex flex-col
                                 text-white transition-all duration-500 ease-smooth
                                 group-hover:shadow-2xl group-hover:-translate-y-1 overflow-hidden"
                                 style="background: linear-gradient(135deg, {{ $c['bg'] }}, {{ $c['bg'] }}dd);">
@@ -368,23 +458,19 @@
                                 </div>
 
                                 <div class="relative flex-1 flex flex-col">
-                                    <div
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
+                                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
                                         bg-white/20 backdrop-blur-sm text-[10px] font-bold uppercase tracking-widest mb-3 self-start">
                                         {{ $dept->code }}
                                     </div>
 
-                                    <h3 class="text-base sm:text-lg font-bold leading-tight line-clamp-2">
+                                    <h3 class="text-lg font-bold leading-tight line-clamp-2">
                                         {{ $dept->name }}</h3>
 
-                                    {{-- Paragraf Terpotong --}}
                                     <p class="text-xs leading-relaxed mt-3 opacity-90 line-clamp-3">
                                         {{ $dept->description }}
                                     </p>
 
-                                    {{-- Tombol Selengkapnya (Selalu Tampil di Kiri Bawah) --}}
-                                    <div
-                                        class="mt-auto pt-5 inline-flex items-center gap-1.5 text-xs font-bold
+                                    <div class="mt-auto pt-5 inline-flex items-center gap-1.5 text-xs font-bold
                                         underline decoration-white/40 hover:decoration-white transition-all duration-300">
                                         Selengkapnya
                                         <i data-lucide="arrow-right"
@@ -857,7 +943,7 @@
                         [
                             'q' => 'Apa saja jurusan/kompetensi keahlian di SMKN 2 Karanganyar?',
                             'a' =>
-                                'SMK Negeri 2 Karanganyar memiliki beberapa kompetensi keahlian unggulan yang terus berkembang mengikuti kebutuhan industri, di antaranya: <strong>Pengembangan Perangkat Lunak dan Gim (PPLG)</strong>, <strong>Teknik Komputer dan Jaringan (TKJ)</strong>, <strong>Teknik Otomotif</strong>, <strong>Teknik Mesin</strong>, dan <strong>Teknik Tekstil</strong>. Setiap jurusan dilengkapi bengkel/laboratorium standar industri dan kerja sama dengan perusahaan mitra untuk PKL.',
+                                'SMK Negeri 2 Karanganyar memiliki beberapa kompetensi keahlian unggulan yang terus berkembang mengikuti kebutuhan industri, di antaranya: <strong>Pengembangan Perangkat Lunak dan Gim (PPLG)</strong>, <strong>Teknik Otomotif</strong>, <strong>Teknik Mesin</strong>, dan <strong>Teknik Tekstil</strong>. Setiap jurusan dilengkapi bengkel/laboratorium standar industri dan kerja sama dengan perusahaan mitra untuk PKL.',
                         ],
                         [
                             'q' => 'Bagaimana cara mendaftar sebagai siswa baru (SPMB)?',
@@ -870,14 +956,9 @@
                                 'Ada. PKL adalah bagian wajib kurikulum SMK yang biasanya dilaksanakan saat kelas XI selama 3–6 bulan. SMKN 2 Karanganyar bekerja sama dengan berbagai perusahaan dan industri mitra, mulai dari bengkel otomotif, pabrik tekstil, perusahaan IT, hingga startup digital. PKL bertujuan memberikan pengalaman kerja nyata, membangun jaringan profesional, dan seringkali menjadi pintu masuk kerja setelah lulus.',
                         ],
                         [
-                            'q' => 'Apakah tersedia beasiswa untuk siswa?',
-                            'a' =>
-                                'Ya. Beberapa skema beasiswa yang dapat diakses siswa SMKN 2 Karanganyar antara lain: <strong>KIP (Kartu Indonesia Pintar)</strong>, <strong>PIP (Program Indonesia Pintar)</strong>, <strong>Beasiswa Prestasi</strong> dari sekolah maupun pihak eksternal, serta bantuan dari <strong>DUDI (Dunia Usaha dan Dunia Industri)</strong> mitra. Informasi dan pendaftaran beasiswa diumumkan melalui website sekolah, grup kelas, dan mading.',
-                        ],
-                        [
                             'q' => 'Apa saja ekstrakurikuler yang tersedia?',
                             'a' =>
-                                'Beragam ekskul di SMKN 2 Karanganyar mencakup bidang: <strong>Olahraga</strong> (futsal, basket, voli, badminton, panahan), <strong>Seni</strong> (paduan suara, tari, musik/band, teater), <strong>Akademik</strong> (KIR, olimpiade sains, robotik, coding club), <strong>Kepemimpinan</strong> (OSIS, Pramuka, PMR, Paskibra), dan <strong>Keagamaan</strong> (Rohis). Semua ekskul dibimbing pembina berpengalaman dan aktif mengikuti kompetisi tingkat kabupaten hingga nasional.',
+                                'Beragam ekskul di SMKN 2 Karanganyar mencakup bidang: <strong>Olahraga</strong> (futsal), <strong>Seni</strong> (paduan suara, karawitan, musik/band), <strong>Akademik</strong> (KIR, English club, Jurnalistik), <strong>Kepemimpinan</strong> (OSIS, Pramuka, PMR, Paskibra), dan <strong>Keagamaan</strong> (Rohis). Semua ekskul dibimbing pembina berpengalaman dan aktif mengikuti kompetisi tingkat kabupaten hingga nasional.',
                         ],
                     ];
                 @endphp
