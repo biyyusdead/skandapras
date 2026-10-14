@@ -13,11 +13,11 @@ class DatabaseSeeder extends Seeder
             SchoolProfileSeeder::class,
             AdmissionSeeder::class,
             SarprasSeeder::class,
-            FullDemoSeeder::class,
+                // FullDemoSeeder::class,
             TeacherSeeder::class,
             CategorySeeder::class,
             ItemSeeder::class,
-            // RoomSeeder::class,     // ← kalau ada
+                // RoomSeeder::class,     // ← kalau ada
             ItemRoomSeeder::class
         ]);
     }
