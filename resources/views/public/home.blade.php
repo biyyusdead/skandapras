@@ -99,14 +99,16 @@
 
                     {{-- RIGHT — Foto 3 Siswa (PNG transparan + fade bottom) --}}
                     <div class="flex justify-center md:justify-end animate-fade-in-up stagger-2 md:mt-4 lg:mt-8">
-                        <div class="relative w-full max-w-[600px] pb-16 md:pb-24">
+                        <div class="relative w-full max-w-[320px] sm:max-w-[400px] md:max-w-[520px] pb-16 md:pb-24 mx-auto md:mx-0">
 
-                            {{-- Foto PNG transparan — fade-out bottom + animasi melayang --}}
-                            <img src="{{ asset('assets/images/hero-siswa.png') }}" alt="Siswa SMK Negeri 2 Karanganyar"
+                            <img
+                                src="{{ asset('assets/images/hero-siswa.png') }}"
+                                alt="Siswa SMK Negeri 2 Karanganyar"
                                 loading="eager"
-                                class="relative w-full h-auto
-                                   [mask-image:linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)]
-                                   [-webkit-mask-image:linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)]">
+                                class="relative w-full h-auto block mx-auto
+                                    [mask-image:linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)]
+                                    [-webkit-mask-image:linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)]"
+                            >
                         </div>
                     </div>
                 </div>

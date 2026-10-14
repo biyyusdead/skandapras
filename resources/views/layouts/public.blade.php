@@ -816,22 +816,20 @@
             </div>
         </footer>
 
-        {{-- ============================================================ --}}
-        {{-- BACK TO TOP BUTTON --}}
-        {{-- ============================================================ --}}
         <button id="back-to-top"
                 type="button"
                 aria-label="Kembali ke atas"
-                class="fixed bottom-6 left-5 z-50 w-12 h-12 rounded-full
+                class="fixed z-[95] w-12 h-12 rounded-full
                        bg-primary-500 hover:bg-primary-700 text-white
                        shadow-lg hover:shadow-xl
                        flex items-center justify-center
                        opacity-0 translate-y-4 pointer-events-none
                        transition-all duration-300
-                       hover:-translate-y-1">
+                       hover:-translate-y-1
+                       left-5 bottom-24
+                       lg:bottom-6">
             <i data-lucide="arrow-up" class="w-5 h-5"></i>
         </button>
-
     </div>{{-- end content wrapper --}}
 
         {{-- ═══════════════════════════════════════════════════════════ --}}

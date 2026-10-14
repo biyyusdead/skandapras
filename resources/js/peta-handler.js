@@ -1,5 +1,5 @@
 // =============================================================
-// peta-handler.js — Port lengkap + tooltip label bangunan
+// peta-handler.js — Port lengkap + tooltip scale by distance
 // =============================================================
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -92,7 +92,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (view3D) view3D.classList.toggle('hidden', view !== '3d');
             if (viewList) viewList.classList.toggle('hidden', view !== 'list');
 
-            // ⬇️ Hide search+filter saat 3D
             const searchFilterBar = document.getElementById('search-filter-bar');
             if (searchFilterBar) {
                 searchFilterBar.classList.toggle('hidden', view === '3d');
@@ -191,7 +190,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
         set('room-modal-title', data.name || '—');
         set('room-modal-code', data.code || 'RUANG');
-        set('room-modal-floor', data.floor ? 'Lt. ' + data.floor : '—');
         set('room-modal-capacity', data.capacity ? data.capacity + ' org' : '—');
         set('room-modal-health', data.health ? data.health + '/100' : '—');
 
@@ -307,15 +305,17 @@ document.addEventListener('DOMContentLoaded', function () {
             'R 20': 63, 'R 19': 62, 'R 18': 61, 'R 17': 60, 'R 16': 59,
             'R 15': 58, 'R 14': 57, 'R 13': 56, 'R 12': 55,
             'R 11': 54, 'R 10': 53, 'R 9': 52, 'R 8': 51, 'R 7': 50,
-            'R 6': 49, 'R 5': 48, 'R 4': 47, 'R 3': 46, 'R 2': 3, 'R KI': 19,
+            'R 6': 49, 'R 5': 48, 'R 4': 47, 'R 3': 46, 'R 2': 3,
+            'R KI': 19,
             'R 31': 74, 'R 32': 75, 'R 33': 76, 'R 34': 77, 'R 35': 78, 'R 36': 79,
             'R. Waka': 30,
         };
 
         const AREA_MAPPING = {
-            'Lap. Upacara': 41, 'Lap. Basket & Voli': 37,
+            'Lap. Upacara': 41,
+            'Lap. Basket': 37,
+            'Lap. Voli': 38,
             'Lap. Utama (Sepak Bola & Atletik)': 42,
-            'Lap. Basket': 37, 'Lap. Voli': 38,
         };
 
         const roomById = new Map();
@@ -388,35 +388,30 @@ document.addEventListener('DOMContentLoaded', function () {
         const LM = c => new THREE.MeshLambertMaterial({ color: c });
 
         // ============================================================
-        // TOOLTIP / LABEL SPRITE SYSTEM
+        // TOOLTIP SYSTEM
         // ============================================================
-        const labelSprites = [];  // {sprite, baseScale, ref}
+        const labelSprites = [];
 
         function makeTooltipSprite(text, color = '#16a34a') {
             const cv = document.createElement('canvas');
             const ctx = cv.getContext('2d');
 
-            // Ukuran canvas
             const dpr = 2;
             const padX = 32;
-            const padY = 20;
             cv.width = 512 * dpr;
             cv.height = 160 * dpr;
             ctx.scale(dpr, dpr);
 
-            // Font measure
             ctx.font = 'bold 40px system-ui, -apple-system, sans-serif';
             const textW = Math.min(ctx.measureText(text).width, 440);
             const boxW = textW + padX * 2;
             const boxH = 80;
             const cx = 256, cy = 80;
 
-            // Shadow
             ctx.shadowColor = 'rgba(0,0,0,0.35)';
             ctx.shadowBlur = 20;
             ctx.shadowOffsetY = 6;
 
-            // Rounded box
             const rx = cx - boxW / 2, ry = cy - boxH / 2;
             const r = 22;
             ctx.fillStyle = 'rgba(255,255,255,0.97)';
@@ -433,13 +428,11 @@ document.addEventListener('DOMContentLoaded', function () {
             ctx.closePath();
             ctx.fill();
 
-            // Border
             ctx.shadowColor = 'transparent';
             ctx.lineWidth = 4;
             ctx.strokeStyle = color;
             ctx.stroke();
 
-            // Text
             ctx.fillStyle = '#0f172a';
             ctx.font = 'bold 40px system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'center';
@@ -466,7 +459,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         function addTooltip(name, worldX, worldY, worldZ, color) {
             const sprite = makeTooltipSprite(name, color);
-            // Scale: base 6 x 1.9 (world unit)
+            // Base scale: gedung biasa
             const baseScale = { x: 6.5, y: 2.0 };
             sprite.scale.set(baseScale.x, baseScale.y, 1);
             sprite.position.set(worldX, worldY, worldZ);
@@ -589,9 +582,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const pk = [];
         const roomsRegistry = [];
+        const stairsRegistry = [];
 
         function resolveRoom(name) {
-            // Cek di DB_MAPPING dulu, fallback ke AREA_MAPPING
             const dbId = DB_MAPPING[name] ?? AREA_MAPPING[name];
             if (dbId == null) return null;
             return roomById.get(dbId) || null;
@@ -600,14 +593,11 @@ document.addEventListener('DOMContentLoaded', function () {
             return (DB_MAPPING[name] ?? AREA_MAPPING[name]) == null;
         }
 
-        // Warna kondisi untuk tooltip border
         function conditionColor(room) {
             if (!room) return '#94a3b8';
             const cond = typeof room.condition === 'object' ? room.condition.value : room.condition;
             return cond === 'baik' ? '#16a34a' : cond === 'rusak_ringan' ? '#f59e0b' : cond === 'rusak_berat' ? '#ef4444' : '#94a3b8';
         }
-
-        const stairsRegistry = []; 
 
         function StairForRow(x, y, w, h, side = 'left') {
             const W = w * S * 0.93 - 0.025, D = h * S * 0.965 - 0.025;
@@ -628,15 +618,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 rail.position.set(stairX + s * (stairW / 2 + 0.04), baseUpper / 2, D / 2 + steps * stepRun / 2);
                 g.add(rail);
             });
-
-            // ⬇️ Register tangga ke registry
-            stairsRegistry.push({
-                x: g.position.x,
-                z: g.position.z,
-                name: `Tangga ${Math.round(x)},${Math.round(y)}`,
-                connectsFloor: [1, 2],  // dari lantai 1 ke 2
-            });
-
+            stairsRegistry.push({ x: g.position.x, z: g.position.z, name: `Tangga`, connectsFloor: [1, 2] });
             scene.add(g);
         }
 
@@ -657,19 +639,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 rail.position.set(s * (stairW / 2 + 0.04), baseUpper / 2, D / 2 + steps * stepRun / 2);
                 g.add(rail);
             });
-
-            stairsRegistry.push({
-                x: g.position.x,
-                z: g.position.z,
-                name: 'Tangga',
-                connectsFloor: [1, 2],
-            });
+            stairsRegistry.push({ x: g.position.x, z: g.position.z, name: 'Tangga', connectsFloor: [1, 2] });
             scene.add(g);
         }
 
-        // =====================================================
-        // BUILDING GENERATOR (dengan tooltip otomatis)
-        // =====================================================
         function B(t, x, y, w, h, k, ht) {
             const dbId = DB_MAPPING[t];
             const deco = (dbId == null);
@@ -776,18 +749,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             roomsRegistry.push(roomData);
 
-            if (t && t.trim() !== '') {
-                const tipColor = deco ? '#94a3b8' : conditionColor(room);
-                // Y tinggi tooltip: sedikit di atas permukaan lapangan
-                const tipY = 1.8;
-                const tooltipSprite = addTooltip(t, m.position.x, tipY, m.position.z, tipColor);
-                tooltipSprite.userData.roomRef = roomData;
-                // Scale lebih besar untuk lapangan (karena area-nya lebar)
-                tooltipSprite.userData.baseScale = { x: 7.5, y: 2.3 };
-                tooltipSprite.scale.set(7.5, 2.3, 1);
-            }
-
-            // ⬇️ TOOLTIP OTOMATIS
             const tipColor = deco ? '#94a3b8' : conditionColor(room);
             const tooltipSprite = addTooltip(t, g.position.x, tooltipY, g.position.z, tipColor);
             tooltipSprite.userData.roomRef = roomData;
@@ -870,17 +831,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
             scene.add(g);
 
-            // Tooltip untuk kedua lantai (stacked vertical)
-            const tipLowerY = lowerH + 0.8;
-            const tipUpperY = baseUpper + upperH + 1.0;
-            const tipColorL = isDecorative(lowerName) ? '#94a3b8' : conditionColor(lowerRoom.room);
-            const tipColorU = isDecorative(upperName) ? '#94a3b8' : conditionColor(upperRoom.room);
-            const tipL = addTooltip(lowerName, g.position.x, tipLowerY, g.position.z, tipColorL);
-            tipL.userData.roomRef = lowerRoom;
-            tipL.userData.stacked = 'lower';
-            const tipU = addTooltip(upperName, g.position.x, tipUpperY, g.position.z, tipColorU);
-            tipU.userData.roomRef = upperRoom;
-            tipU.userData.stacked = 'upper';
+            if (lowerName && lowerName.trim() !== '') {
+                const tipL = addTooltip(lowerName, g.position.x, lowerH + 0.8, g.position.z, isDecorative(lowerName) ? '#94a3b8' : conditionColor(lowerRoom.room));
+                tipL.userData.roomRef = lowerRoom;
+            }
+            if (upperName && upperName.trim() !== '') {
+                const tipU = addTooltip(upperName, g.position.x, baseUpper + upperH + 1.0, g.position.z, isDecorative(upperName) ? '#94a3b8' : conditionColor(upperRoom.room));
+                tipU.userData.roomRef = upperRoom;
+            }
         }
 
         function BUpperWingTwoRooms(nameA, nameB, x, y, w, h, k = 'b') {
@@ -1069,6 +1027,15 @@ document.addEventListener('DOMContentLoaded', function () {
             m.userData.room = roomData;
             pk.push(m);
             roomsRegistry.push(roomData);
+
+            if (t && t.trim() !== '') {
+                const tipColor = deco ? '#94a3b8' : conditionColor(room);
+                const tipY = 1.8;
+                const tooltipSprite = addTooltip(t, m.position.x, tipY, m.position.z, tipColor);
+                tooltipSprite.userData.roomRef = roomData;
+                tooltipSprite.userData.baseScale = { x: 7.5, y: 2.3 };
+                tooltipSprite.scale.set(7.5, 2.3, 1);
+            }
         }
 
         function F(x, y, w, h) {
@@ -1101,40 +1068,6 @@ document.addEventListener('DOMContentLoaded', function () {
             scene.add(g);
         }
 
-        function createSchoolBus(px, pz) {
-            const g = new THREE.Group();
-            g.position.set(px, 0, pz);
-            const b = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.75, 0.95), LM(0xf59e0b));
-            b.position.y = 0.45; b.castShadow = !isLowEnd; g.add(b);
-            const hd = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.48, 0.9), LM(0xf59e0b));
-            hd.position.set(1.2, 0.32, 0); g.add(hd);
-            const win = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.26, 0.98), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
-            win.position.set(-0.05, 0.62, 0); g.add(win);
-            const rf = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.08, 0.92), LM(0xf8fafc));
-            rf.position.set(-0.05, 0.86, 0); g.add(rf);
-            [[-0.65, -0.48], [0.65, -0.48], [-0.65, 0.48], [0.65, 0.48]].forEach(([x, z]) => {
-                const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.12, 12), LM(0x1e293b));
-                wh.rotation.x = Math.PI / 2; wh.position.set(x, 0.2, z); g.add(wh);
-            });
-            scene.add(g);
-        }
-
-        function createCartoonCar(px, pz, col) {
-            const g = new THREE.Group();
-            g.position.set(px, 0, pz);
-            const b = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.42, 0.85), LM(col));
-            b.position.y = 0.28; b.castShadow = !isLowEnd; g.add(b);
-            const cab = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.36, 0.76), LM(col));
-            cab.position.set(-0.1, 0.62, 0); g.add(cab);
-            const win = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.28, 0.78), new THREE.MeshBasicMaterial({ color: 0x7dd3fc }));
-            win.position.set(-0.1, 0.62, 0); g.add(win);
-            [[-0.45, -0.43], [0.45, -0.43], [-0.45, 0.43], [0.45, 0.43]].forEach(([x, z]) => {
-                const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.1, 10), LM(0x1e293b));
-                wh.rotation.x = Math.PI / 2; wh.position.set(x, 0.16, z); g.add(wh);
-            });
-            scene.add(g);
-        }
-
         // =====================================================
         // BUILD WORLD
         // =====================================================
@@ -1145,7 +1078,6 @@ document.addEventListener('DOMContentLoaded', function () {
         P('Lap. Basket', 1288, 690, 88, 150, 0x9fc3ea);
         P('Lap. Voli', 1384, 690, 70, 150, 0x9fc3ea);
         P('Lap. Utama (Sepak Bola & Atletik)', 1190, 180, 340, 470, 0xb91c1c);
-        P('', 896, 18, 260, 44, 0xc3d5ee);
 
         B('Lab CAM & CNC', 48, 22, 250, 52, 'g', 2.6);
         B('Basecamp Organisasi', 300, 22, 190, 44, 'o', 2);
@@ -1157,7 +1089,6 @@ document.addEventListener('DOMContentLoaded', function () {
         B('B. Mesin', 70, 688, 418, 82, 'c', 3);
         B('R. Kesiswaan', 1458, 690, 78, 60, 'o', 2);
 
-        // Kantin + Kantin + R 30
         (function () {
             const x = 480, y = 20, w = 268, h = 42;
             const W = w * S * 0.93 - 0.025, D = h * S * 0.965 - 0.025;
@@ -1202,7 +1133,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             scene.add(g);
 
-            // Tooltip
             const tipL = addTooltip('Kantin', g.position.x - W / 4, lowerH + 0.7, g.position.z, isDecorative('Kantin') ? '#94a3b8' : conditionColor(kL.room));
             tipL.userData.roomRef = kL;
             const tipR30 = addTooltip('R 30', g.position.x, baseUpper + upperH + 1.0, g.position.z, isDecorative('R 30') ? '#94a3b8' : conditionColor(r30.room));
@@ -1331,17 +1261,7 @@ document.addEventListener('DOMContentLoaded', function () {
         [[520, 215], [600, 290], [690, 200], [780, 290], [850, 225], [500, 300], [520, 660], [870, 335], [880, 95], [1165, 240], [1165, 380], [1165, 540], [1545, 210], [1545, 330], [1545, 450], [1545, 570], [1545, 650], [440, 28], [60, 860], [480, 760], [1000, 860], [1560, 500]]
             .forEach((p, i) => tree(p[0], p[1], 0.95 + (i % 3) * 0.2));
 
-        for (let i = 0; i < 8; i++) {
-            const vx = (60 + i * 46 - CX) * S, vz = (822 - CY) * S;
-            if (i < 2) createSchoolBus(vx, vz);
-            else createCartoonCar(vx, vz, [0xef4444, 0x0284c7, 0xf8fafc, 0x10b981, 0xf97316, 0x334155][(i - 2) % 6]);
-        }
-        for (let i = 0; i < 5; i++) {
-            const vx = (1050 + i * 45 - CX) * S, vz = (790 - CY) * S;
-            if (i === 0) createSchoolBus(vx, vz);
-            else createCartoonCar(vx, vz, [0xef4444, 0x0284c7, 0xf59e0b, 0xf8fafc][(i - 1) % 4]);
-        }
-
+        // Bendera
         (function () {
             const fx = (720 - CX) * S, fz = (590 - CY) * S;
             const fpBase = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.85, 0.22, 16), LM(0xf1f5f9));
@@ -1360,75 +1280,6 @@ document.addEventListener('DOMContentLoaded', function () {
             flag.position.set(fx + 0.7, 5.5, fz); flag.castShadow = !isLowEnd;
             scene.add(flag);
         })();
-
-        (function () {
-            const gx = (785 - CX) * S, gz = (865 - CY) * S;
-            const gG = new THREE.Group();
-            gG.position.set(gx, 0, gz);
-            const matPillar = LM(0xf8fafc), matTrim = LM(0x16a34a), matDark = LM(0x334155), matGlass = LM(0x7dd3fc);
-
-            [-4.9, 4.9].forEach(x => {
-                const pil = new THREE.Mesh(new THREE.BoxGeometry(0.55, 2.1, 0.65), matPillar);
-                pil.position.set(x, 1.05, 0); gG.add(pil);
-                const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.16, 0.68), matTrim);
-                stripe.position.set(x, 1.72, 0); gG.add(stripe);
-                const cap = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.14, 0.8), LM(0x15803d));
-                cap.position.set(x, 2.17, 0); gG.add(cap);
-            });
-
-            const booth = new THREE.Group();
-            booth.position.set(0, 0, 0.15); gG.add(booth);
-            const base = new THREE.Mesh(new THREE.BoxGeometry(1.65, 1.45, 1.35), LM(0xfef3c7));
-            base.position.y = 0.73; base.castShadow = !isLowEnd; booth.add(base);
-            const roofBooth = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.18, 1.58), LM(0x16a34a));
-            roofBooth.position.y = 1.55; booth.add(roofBooth);
-            const winF = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.55, 0.045), matGlass);
-            winF.position.set(0, 0.98, 0.84); booth.add(winF);
-            const winS = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.52, 0.82), matGlass);
-            winS.position.set(0.84, 0.98, 0); booth.add(winS);
-
-            const cv1 = document.createElement('canvas'); cv1.width = 256; cv1.height = 80;
-            const g1 = cv1.getContext('2d');
-            g1.fillStyle = '#166534'; g1.fillRect(0, 0, 256, 80);
-            g1.fillStyle = '#ffffff'; g1.font = 'bold 28px sans-serif'; g1.textAlign = 'center'; g1.textBaseline = 'middle';
-            g1.fillText('POS SATPAM', 128, 40);
-            const t1 = new THREE.CanvasTexture(cv1);
-            const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.55, 0.42), new THREE.MeshBasicMaterial({ map: t1, side: THREE.DoubleSide }));
-            sign.position.set(0, 1.82, 0.82); booth.add(sign);
-
-            const banner = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.48, 0.16), matDark);
-            banner.position.set(0, 2.72, 0); gG.add(banner);
-
-            const cv2 = document.createElement('canvas'); cv2.width = 768; cv2.height = 96;
-            const g2 = cv2.getContext('2d');
-            g2.fillStyle = '#166534'; g2.fillRect(0, 0, 768, 96);
-            g2.fillStyle = '#ffffff'; g2.font = 'bold 36px sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
-            g2.fillText('SMK NEGERI 2 KARANGANYAR', 384, 48);
-            const t2 = new THREE.CanvasTexture(cv2);
-            const label2 = new THREE.Mesh(new THREE.PlaneGeometry(5.35, 0.43), new THREE.MeshBasicMaterial({ map: t2, side: THREE.DoubleSide }));
-            label2.position.set(0, 2.72, 0.095); gG.add(label2);
-
-            scene.add(gG);
-        })();
-
-        [[-38.3, -22.2, 76.7, 0.2], [-38.3, 21.5, 33.1, 0.2], [5.2, 21.5, 33.2, 0.2], [-38.3, -22.2, 0.2, 43.7], [38.4, -22.2, 0.2, 43.7]].forEach(a => {
-            const wallH = 1.15;
-            const f = new THREE.Mesh(new THREE.BoxGeometry(a[2], wallH, a[3]), LM(0xf8f5e9));
-            f.position.set(a[0] + a[2] / 2, wallH / 2, a[1] + a[3] / 2);
-            f.castShadow = f.receiveShadow = !isLowEnd;
-            scene.add(f);
-            const cap = new THREE.Mesh(new THREE.BoxGeometry(a[2] + (a[2] > 1 ? 0.1 : 0.04), 0.1, a[3] + (a[3] > 1 ? 0.1 : 0.04)), LM(0x16a34a));
-            cap.position.set(f.position.x, wallH + 0.05, f.position.z); scene.add(cap);
-            if (a[2] > 20) {
-                const count = Math.floor(a[2] / 5.5);
-                for (let i = 1; i < count; i++) {
-                    const x = a[0] + i * a[2] / count;
-                    const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, wallH + 0.08, 0.28), LM(0x15803d));
-                    post.position.set(x, wallH / 2, a[1] + a[3] / 2);
-                    scene.add(post);
-                }
-            }
-        });
 
         // =====================================================
         // CAMERA & INTERACTION
@@ -1449,17 +1300,115 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         updCam();
 
-        // Auto-scale tooltip berdasarkan jarak kamera
+        // ============================================================
+        // UPDATE TOOLTIP SCALE — TOOLTIP MENGEcil SAAT ZOOM OUT
+        // ============================================================
+        const BASE_DIST = 75;          // jarak default kamera
+        const MIN_SCALE = 0.35;        // batas minimum tooltip
+        const MAX_SCALE = 1.35;        // batas maksimum tooltip
+
         function updateTooltipScale() {
-            const baseDist = 75;
-            const currentDist = rad;
-            const ratio = Math.min(2.5, Math.max(0.35, baseDist / currentDist));
+            const ratio = BASE_DIST / Math.max(rad, 1);
+            const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, ratio));
 
             labelSprites.forEach(sprite => {
                 const bs = sprite.userData.baseScale || { x: 6.5, y: 2.0 };
-                sprite.scale.set(bs.x * ratio, bs.y * ratio, 1);
-                // Fade out kalau terlalu jauh / kecil
-                sprite.material.opacity = Math.min(1, Math.max(0.15, ratio * 0.9));
+                sprite.scale.set(bs.x * scale, bs.y * scale, 1);
+
+                // Kalau di-hidden declutter, opacity tetap 0
+                if (sprite.userData._hiddenByDeclutter) {
+                    sprite.material.opacity = 0;
+                } else {
+                    sprite.material.opacity = Math.max(0.3, Math.min(1, scale));
+                }
+            });
+        }
+
+                // ============================================================
+        // DECLUTTER TOOLTIPS — sembunyikan yang numpuk
+        // ============================================================
+        let lastDeclutterTime = 0;
+        const DECLUTTER_INTERVAL = 150; // ms — jangan tiap frame, berat
+        const COLLISION_RADIUS = 110;   // px — radius tabrakan di layar
+        const MOBILE_RADIUS = 70;       // px — mobile lebih kecil
+        const isMobile = () => window.innerWidth < 768;
+
+        function declutterTooltips() {
+            const now = performance.now();
+            if (now - lastDeclutterTime < DECLUTTER_INTERVAL) return;
+            lastDeclutterTime = now;
+
+            if (!labelSprites.length) return;
+
+            const rect = ren.domElement.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
+            const radius = isMobile() ? MOBILE_RADIUS : COLLISION_RADIUS;
+
+            // Kumpulkan label yang visible, hitung posisi screen + jarak ke kamera
+            const visible = [];
+            labelSprites.forEach(sprite => {
+                if (!sprite.visible) return;
+
+                // Cek ada di depan kamera atau tidak
+                const pos = sprite.position.clone();
+                const proj = pos.clone().project(cam);
+
+                // Skip kalau di belakang kamera
+                if (proj.z > 1 || proj.z < -1) {
+                    sprite.userData._onScreen = false;
+                    return;
+                }
+
+                const sx = (proj.x * 0.5 + 0.5) * w;
+                const sy = (-proj.y * 0.5 + 0.5) * h;
+
+                // Skip kalau keluar viewport
+                if (sx < -50 || sx > w + 50 || sy < -50 || sy > h + 50) {
+                    sprite.userData._onScreen = false;
+                    return;
+                }
+
+                const distToCam = cam.position.distanceTo(sprite.position);
+
+                sprite.userData._onScreen = true;
+                sprite.userData._screenX = sx;
+                sprite.userData._screenY = sy;
+                sprite.userData._distToCam = distToCam;
+
+                visible.push(sprite);
+            });
+
+            // Sort: paling dekat kamera = prioritas (paling depan)
+            visible.sort((a, b) => a.userData._distToCam - b.userData._distToCam);
+
+            // Tempat menyimpan label yang sudah ditampilkan
+            const kept = [];
+
+            visible.forEach(sprite => {
+                const sx = sprite.userData._screenX;
+                const sy = sprite.userData._screenY;
+
+                let collides = false;
+                for (const other of kept) {
+                    const ox = other.userData._screenX;
+                    const oy = other.userData._screenY;
+                    const d = Math.hypot(sx - ox, sy - oy);
+                    if (d < radius) {
+                        collides = true;
+                        break;
+                    }
+                }
+
+                if (collides) {
+                    // Numpuk dengan yang lebih depan → sembunyikan
+                    sprite.material.opacity = 0;
+                    sprite.userData._hiddenByDeclutter = true;
+                } else {
+                    kept.push(sprite);
+                    sprite.userData._hiddenByDeclutter = false;
+                    // Opacity akan di-set oleh updateTooltipScale
+                }
             });
         }
 
@@ -1521,7 +1470,6 @@ document.addEventListener('DOMContentLoaded', function () {
                                 code: '—',
                                 condition: 'dekoratif',
                                 conditionLabel: 'Dekoratif',
-                                floor: '—',
                                 location: 'Bangunan ini hanya untuk dekorasi peta 3D.',
                                 capacity: '—',
                                 health: '—',
@@ -1533,7 +1481,6 @@ document.addEventListener('DOMContentLoaded', function () {
                                 id: r.id, name: r.name, code: r.code,
                                 condition: typeof r.condition === 'object' ? r.condition.value : r.condition,
                                 conditionLabel: r.conditionLabel || (typeof r.condition === 'object' ? r.condition.label : 'Tersedia'),
-                                floor: r.map_floor || r.floor || '—',
                                 location: r.description || '',
                                 capacity: r.capacity, health: r.health_score,
                                 url: r.detail_url || '#', reportUrl: r.report_url || '#',
@@ -1591,7 +1538,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 const match = !query || (obj.name || '').toLowerCase().includes(query);
                 m.visible = match;
             });
-            // Filter tooltip juga
             labelSprites.forEach(sprite => {
                 const ref = sprite.userData.roomRef;
                 if (!ref) return;
@@ -1600,7 +1546,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         };
 
-        // Toggle semua tooltip (bisa dipanggil dari tombol)
         window.toggleTooltips = function (show) {
             labelSprites.forEach(s => s.visible = show);
             return show;
@@ -1609,7 +1554,6 @@ document.addEventListener('DOMContentLoaded', function () {
         let rendering = true;
         document.addEventListener('visibilitychange', () => { rendering = !document.hidden; });
 
-        // Initial tooltip scale
         updateTooltipScale();
 
         function loop() {
@@ -1623,7 +1567,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             if (auto && !fly) th += 0.003;
 
-            // Billboard arrow rute — selalu menghadap kamera
+            declutterTooltips();
+
             const arrows = window.__peta3D?._billboardArrows;
             if (arrows && arrows.length) {
                 arrows.forEach(a => a.quaternion.copy(cam.quaternion));
