@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Ambil Koordinat Denah</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .header {
+            max-width: 1400px;
+            margin: 0 auto 20px;
+            padding: 16px 20px;
+            background: #2a2a2a;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header h1 { font-size: 18px; }
+        .header p { font-size: 13px; color: #999; margin-top: 4px; }
+        .header button {
+            padding: 8px 16px;
+            background: #6C4AB6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .header button:hover { background: #5a3d99; }
+        .canvas-wrapper {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            display: inline-block;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        #denah {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            cursor: crosshair;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        .marker {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: #ef4444;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+            color: white;
+        }
+        .panel {
+            max-width: 1400px;
+            margin: 20px auto 0;
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 16px 20px;
+        }
+        .panel h2 {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .coords-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+        .coords-item {
+            font-family: monospace;
+            font-size: 13px;
+            padding: 8px 12px;
+            background: #1a1a1a;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .coords-item .num {
+            color: #6C4AB6;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .empty {
+            color: #666;
+            font-style: italic;
+            font-size: 13px;
+            padding: 8px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <h1>📍 Ambil Koordinat Denah</h1>
+        <p>Klik di denah untuk ambil koordinat X, Y (dalam %). Klik kanan = hapus penanda terakhir.</p>
+    </div>
+    <button onclick="resetMarkers()">Reset Semua</button>
+</div>
+
+<div class="canvas-wrapper">
+    <img id="denah" src="/images/denah-sekolah.jpeg" alt="Denah">
+</div>
+
+<div class="panel">
+    <h2>Koordinat Terpilih (<span id="count">0</span>)</h2>
+    <div class="coords-list" id="coordsList">
+        <div class="empty">Belum ada koordinat. Klik di denah untuk mulai.</div>
+    </div>
+</div>
+
+<script>
+    const img = document.getElementById('denah');
+    const wrapper = document.querySelector('.canvas-wrapper');
+    const list = document.getElementById('coordsList');
+    const countEl = document.getElementById('count');
+    const markers = [];
+
+    img.addEventListener('click', function(e) {
+        const rect = img.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        addMarker(x, y);
+
+        console.log(`📍 X: ${x.toFixed(2)}%, Y: ${y.toFixed(2)}%`);
+    });
+
+    img.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        removeLastMarker();
+    });
+
+    function addMarker(x, y) {
+        const marker = document.createElement('div');
+        marker.className = 'marker';
+        marker.style.left = x + '%';
+        marker.style.top = y + '%';
+        marker.textContent = markers.length + 1;
+        marker.dataset.x = x.toFixed(2);
+        marker.dataset.y = y.toFixed(2);
+
+        wrapper.appendChild(marker);
+        markers.push(marker);
+
+        updateList();
+    }
+
+    function removeLastMarker() {
+        const last = markers.pop();
+        if (last) {
+            last.remove();
+            updateList();
+        }
+    }
+
+    function resetMarkers() {
+        markers.forEach(m => m.remove());
+        markers.length = 0;
+        updateList();
+    }
+
+    function updateList() {
+        countEl.textContent = markers.length;
+
+        if (markers.length === 0) {
+            list.innerHTML = '<div class="empty">Belum ada koordinat. Klik di denah untuk mulai.</div>';
+            return;
+        }
+
+        list.innerHTML = markers.map((m, i) => `
+            <div class="coords-item">
+                <span><span class="num">#${i + 1}</span> X: ${m.dataset.x}%, Y: ${m.dataset.y}%</span>
+                <button onclick="copyToClipboard('${m.dataset.x}', '${m.dataset.y}')"
+                        style="background:#6C4AB6;border:none;color:white;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;">
+                    Copy
+                </button>
+            </div>
+        `).reverse().join('');
+    }
+
+    function copyToClipboard(x, y) {
+        const text = `'x' => ${x}, 'y' => ${y}`;
+        navigator.clipboard.writeText(text);
+        alert(`Tersalin:\n${text}`);
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,82 @@
+/* ============================================================
+   Peta Interaktif Custom Styles
+   ============================================================ */
+
+.scroll-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-reveal.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.scroll-reveal[data-delay="75"]  { transition-delay: 75ms;  }
+.scroll-reveal[data-delay="150"] { transition-delay: 150ms; }
+.scroll-reveal[data-delay="225"] { transition-delay: 225ms; }
+
+.room-marker {
+    transition: filter 0.2s ease;
+}
+
+.room-marker:hover {
+    filter: drop-shadow(0 4px 8px rgba(108, 74, 182, 0.3));
+    z-index: 30;
+}
+
+#map-viewport.is-dragging {
+    cursor: grabbing !important;
+}
+
+#three-container canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    touch-action: none;
+    outline: none;
+}
+
+/* ============================================================
+   Wave Animation — Seamless Single Layer
+   ============================================================ */
+.wave-track {
+    width: 100%;
+    height: 3rem;
+    overflow: hidden;
+    position: relative;
+}
+
+@media (min-width: 768px) {
+    .wave-track { height: 4rem; }
+}
+
+@media (min-width: 1024px) {
+    .wave-track { height: 5rem; }
+}
+
+.wave-svg {
+    position: absolute;
+    inset: 0;
+    width: 200%;
+    height: 100%;
+    animation: waveMove 22s linear infinite;
+    will-change: transform;
+}
+
+@keyframes waveMove {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .scroll-reveal {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+    .room-marker .animate-ping { animation: none !important; }
+    .wave-svg { animation: none; }
+}
