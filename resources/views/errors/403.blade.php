@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>403 — Akses Ditolak</title>
-    @vite(['resources/css/app.css'])
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-surface-50 flex items-center justify-center p-4">
     <div class="text-center max-w-md">

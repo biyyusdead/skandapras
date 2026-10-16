@@ -5,18 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') — SKANDAPRAS</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
     {{-- Favicon --}}
     @php $logo = \App\Models\SchoolProfile::current()?->logo; @endphp
     @if ($logo)
         <link rel="icon" href="{{ asset('storage/' . $logo) }}">
     @endif
-    
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     {{-- ═══════════════════════════════════════════════════════════ --}}
     {{-- SKELETON INSTAN — deteksi navigasi SEBELUM body render     --}}
     {{-- ═══════════════════════════════════════════════════════════ --}}
@@ -338,7 +334,11 @@
             </div>
 
             {{-- Notification bell --}}
-            <div x-data="notificationDropdown()" class="relative">
+            <div x-data="notificationDropdown()"
+                 data-unread-count="{{ auth()->user()->unreadNotifications()->count() }}"
+                 data-dropdown-url="{{ route('notifications.dropdown') }}"
+                 data-mark-all-url="{{ route('notifications.mark-all') }}"
+                 class="relative">
                 <button x-on:click="toggle()"
                         class="relative p-2 rounded-lg hover:bg-surface-100 text-surface-600
                             transition-colors duration-150 active:scale-95">
@@ -480,214 +480,7 @@
 
 </div>
 
-{{-- ═══════════════════════════════════════════════════════════════ --}}
-{{-- SCRIPT 1: LUCIDE + FORM SUBMIT                                  --}}
-{{-- ═══════════════════════════════════════════════════════════════ --}}
-<script>
-    document.addEventListener('alpine:initialized', () => window.initLucide?.());
-    document.addEventListener('submit', (e) => {
-        if (e.target.tagName === 'FORM' && e.target.checkValidity()) {
-            setTimeout(() => window.dispatchEvent(new CustomEvent('form-submit')), 0);
-        }
-    }, true);
-</script>
-
-{{-- ═══════════════════════════════════════════════════════════════ --}}
-{{-- SCRIPT 2: NOTIFICATION DROPDOWN                                 --}}
-{{-- ═══════════════════════════════════════════════════════════════ --}}
-<script>
-    function notificationDropdown() {
-        return {
-            open: false,
-            loading: false,
-            notifications: [],
-            unreadCount: {{ auth()->user()->unreadNotifications->count() }},
-
-            toggle() {
-                this.open = !this.open;
-                if (this.open) this.fetchNotifications();
-            },
-
-            close() {
-                this.open = false;
-            },
-
-            async fetchNotifications() {
-                this.loading = true;
-                try {
-                    const res = await fetch('{{ route('notifications.dropdown') }}', {
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept': 'application/json',
-                        }
-                    });
-                    const data = await res.json();
-                    this.notifications = data.notifications;
-                    this.unreadCount = data.unread_count;
-                    this.$nextTick(() => window.refreshLucide?.());
-                } catch (e) {
-                    console.error(e);
-                } finally {
-                    this.loading = false;
-                }
-            },
-
-            async markAllRead() {
-                try {
-                    await fetch('{{ route('notifications.mark-all') }}', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept': 'application/json',
-                        }
-                    });
-                    this.unreadCount = 0;
-                    this.notifications.forEach(n => n.read = true);
-                } catch (e) {
-                    console.error(e);
-                }
-            }
-        }
-    }
-</script>
-
-{{-- Welcome Popup --}}
 <x-welcome-popup />
-
-{{-- ═══════════════════════════════════════════════════════════════ --}}
-{{-- SCRIPT 3: FIX BFCACHE + SKELETON INSTAN                         --}}
-{{-- ═══════════════════════════════════════════════════════════════ --}}
-<script>
-    // ═══ 1. FIX BFCACHE — reset saat Back/Forward button ═══
-    window.addEventListener('pageshow', function(event) {
-        if (event.persisted) {
-            const content  = document.getElementById('page-content');
-            const skeleton = document.getElementById('page-skeleton');
-
-            if (content) content.classList.remove('hidden');
-            if (skeleton) skeleton.classList.add('hidden');
-
-            document.documentElement.classList.remove('nav-loading');
-
-            const sp = document.getElementById('nav-spinner');
-            if (sp && sp.parentNode) sp.parentNode.removeChild(sp);
-
-            if (typeof LoadingState !== 'undefined' && LoadingState.cancel) {
-                LoadingState.cancel('nav');
-                LoadingState.cancel('form-btn');
-            }
-
-            sessionStorage.removeItem('skandapras_nav');
-        }
-    });
-
-    // ═══ 2. SKELETON INSTAN saat navigasi ═══
-    (function() {
-        if (sessionStorage.getItem('skandapras_nav') !== '1') return;
-
-        sessionStorage.removeItem('skandapras_nav');
-
-        const hasContent  = !!document.getElementById('page-content');
-        const hasSkeleton = !!document.getElementById('page-skeleton');
-
-        if (!hasContent || !hasSkeleton) {
-            document.documentElement.classList.remove('nav-loading');
-            return;
-        }
-
-        let finished = false;
-
-        const activate = () => {
-            if (finished) return;
-            finished = true;
-
-            const content  = document.getElementById('page-content');
-            const skeleton = document.getElementById('page-skeleton');
-
-            if (content && skeleton) {
-                content.classList.add('hidden');
-                skeleton.classList.remove('hidden');
-            }
-
-            document.documentElement.classList.remove('nav-loading');
-
-            setTimeout(() => {
-                const c = document.getElementById('page-content');
-                const s = document.getElementById('page-skeleton');
-                if (c && s) {
-                    c.classList.remove('hidden');
-                    s.classList.add('hidden');
-                }
-
-                const sp = document.getElementById('nav-spinner');
-                if (sp && sp.parentNode) sp.parentNode.removeChild(sp);
-            }, 400);
-        };
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', activate);
-        } else {
-            activate();
-        }
-
-        setTimeout(() => {
-            if (!finished) {
-                finished = true;
-                document.documentElement.classList.remove('nav-loading');
-                const c = document.getElementById('page-content');
-                const s = document.getElementById('page-skeleton');
-                if (c) c.classList.remove('hidden');
-                if (s) s.classList.add('hidden');
-            }
-        }, 3000);
-    })();
-
-    // ═══ 3. Deteksi klik link → skeleton + flag navigasi ═══
-    document.addEventListener('click', (e) => {
-        const a = e.target.closest('a');
-        if (!a) return;
-        const href = a.getAttribute('href');
-        if (!href) return;
-        if (
-            a.target === '_blank' ||
-            a.hasAttribute('download') ||
-            href.startsWith('#') ||
-            href.startsWith('javascript:') ||
-            href.startsWith('mailto:') ||
-            href.startsWith('tel:') ||
-            a.hostname !== window.location.hostname
-        ) return;
-        if (a.pathname === window.location.pathname && a.search === window.location.search) return;
-
-        sessionStorage.setItem('skandapras_nav', '1');
-
-        const content  = document.getElementById('page-content');
-        const skeleton = document.getElementById('page-skeleton');
-        if (!content || !skeleton) return;
-
-        if (typeof LoadingState !== 'undefined') {
-            LoadingState.start('nav', {
-                onSkeleton: () => {
-                    content.classList.add('hidden');
-                    skeleton.classList.remove('hidden');
-                },
-                onSpinner: () => {
-                    if (!document.getElementById('nav-spinner')) {
-                        const sp = document.createElement('div');
-                        sp.id = 'nav-spinner';
-                        sp.className = 'flex flex-col items-center justify-center py-8 gap-3';
-                        sp.innerHTML = `
-                            <span class="inline-block w-10 h-10 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></span>
-                            <p class="text-sm text-surface-500">Masih memuat, mohon tunggu...</p>
-                        `;
-                        skeleton.prepend(sp);
-                    }
-                },
-            });
-        }
-    }, true);
-</script>
 
 @stack('scripts')
 

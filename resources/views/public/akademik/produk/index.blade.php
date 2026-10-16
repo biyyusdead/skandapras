@@ -218,31 +218,9 @@
 
 @endsection
 
-@push('styles')
-<style>
-    .filter-btn.active { background-color: #6C4AB6; color: #fff; border-color: #6C4AB6; }
-    .scroll-reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.6s cubic-bezier(0.16,1,0.3,1), transform 0.6s cubic-bezier(0.16,1,0.3,1); }
-    .scroll-reveal.show { opacity: 1; transform: translateY(0); }
-    .scroll-reveal[data-delay="100"] { transition-delay: 100ms; }
-    .scroll-reveal[data-delay="200"] { transition-delay: 200ms; }
-</style>
-@endpush
-
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Reveal
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('show');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.12 });
-        document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
-
-        // Filter
         const buttons = document.querySelectorAll('.filter-btn');
         const cards = document.querySelectorAll('.product-card');
         const noRes = document.getElementById('noResult');

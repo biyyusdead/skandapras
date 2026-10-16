@@ -136,8 +136,11 @@
 
                         {{-- Foto PNG transparan — fade-out bottom --}}
                         <img
-                            src="{{ asset('assets/images/hero-siswa.png') }}"
+                            src="{{ asset('assets/images/hero-siswa.webp') }}"
                             alt="Siswa SMK Negeri 2 Karanganyar"
+                            width="648"
+                            height="385"
+                            fetchpriority="high"
                             loading="eager"
                             class="relative w-full h-auto block mx-auto
                                    [mask-image:linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)]

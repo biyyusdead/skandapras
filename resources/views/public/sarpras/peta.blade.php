@@ -3,8 +3,6 @@
 @section('title', 'Peta Ruangan — SMK Negeri 2 Karanganyar')
 @section('description', 'Jelajahi peta interaktif ruangan SMK Negeri 2 Karanganyar. Klik titik untuk melihat detail ruangan, kondisi, dan fasilitas.')
 
-@push('head')
-
 @push('styles')
     @vite('resources/css/peta-custom.css')
 @endpush
@@ -53,6 +51,33 @@
 {{-- ============================================================ --}}
 <section class="relative bg-surface-50 py-12">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
+
+    {{-- INFO BOX --}}
+        <div class="relative bg-gradient-to-br from-primary-50 to-primary-100/50 rounded-2xl border border-primary-200/60 p-5 overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary-200/30 blur-2xl pointer-events-none"></div>
+            <div class="relative flex items-start gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center shrink-0">
+                    <i data-lucide="info" class="w-5 h-5 text-white"></i>
+                </div>
+                <div class="text-xs sm:text-sm text-primary-900 leading-relaxed">
+                    <p class="font-bold mb-2">Panduan Penggunaan Peta:</p>
+                    <ul class="space-y-1 text-primary-800">
+                        <li class="flex items-start gap-2">
+                            <span class="text-primary-500 mt-0.5">•</span>
+                            <span>Pilih tab <strong>Model 3D</strong> untuk tampilan denah 3 dimensi kampus SMK Negeri 2 Karanganyar.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-primary-500 mt-0.5">•</span>
+                            <span>Klik langsung pada bangunan untuk membuka jendela informasi ruangan & data sarana prasarana.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-primary-500 mt-0.5">•</span>
+                            <span>Gunakan pencarian untuk menyorot ruangan secara instan.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
         {{-- VIEW TOGGLE — selalu tampil di atas --}}
         <div class="flex items-center justify-between gap-3 flex-wrap">
@@ -411,33 +436,6 @@
             <div id="list-empty" class="hidden text-center py-20">
                 <i data-lucide="search-x" class="w-12 h-12 text-surface-300 mx-auto mb-3"></i>
                 <p class="text-sm text-surface-500">Tidak ada ruangan yang cocok dengan pencarian.</p>
-            </div>
-        </div>
-
-        {{-- INFO BOX --}}
-        <div class="relative bg-gradient-to-br from-primary-50 to-primary-100/50 rounded-2xl border border-primary-200/60 p-5 overflow-hidden">
-            <div class="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary-200/30 blur-2xl pointer-events-none"></div>
-            <div class="relative flex items-start gap-3">
-                <div class="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center shrink-0">
-                    <i data-lucide="info" class="w-5 h-5 text-white"></i>
-                </div>
-                <div class="text-xs sm:text-sm text-primary-900 leading-relaxed">
-                    <p class="font-bold mb-2">Panduan Penggunaan Peta:</p>
-                    <ul class="space-y-1 text-primary-800">
-                        <li class="flex items-start gap-2">
-                            <span class="text-primary-500 mt-0.5">•</span>
-                            <span>Pilih tab <strong>Model 3D</strong> untuk tampilan denah 3 dimensi kampus SMK Negeri 2 Karanganyar.</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <span class="text-primary-500 mt-0.5">•</span>
-                            <span>Klik langsung pada bangunan untuk membuka jendela informasi ruangan & data sarana prasarana.</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <span class="text-primary-500 mt-0.5">•</span>
-                            <span>Gunakan pencarian untuk menyorot ruangan secara instan.</span>
-                        </li>
-                    </ul>
-                </div>
             </div>
         </div>
 

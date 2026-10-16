@@ -4,13 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Beranda') — {{ \App\Models\SchoolProfile::current()?->school_name ?? config('app.school_name') }}</title>
     <meta name="description" content="@yield('description', \App\Models\SchoolProfile::current()?->description ?? '')">
     @php $logo = \App\Models\SchoolProfile::current()?->logo; @endphp
-    @if (request()->routeIs('public.home'))
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer></script>
-    @endif
     @if ($logo)
         <link rel="icon" href="{{ asset('storage/' . $logo) }}">
     @endif
@@ -1157,59 +1154,6 @@
     </nav>
 
     <x-chatbot />
-    {{-- ═══════════════════════════════════════════════════════════ --}}
-{{-- FIX BFCACHE — Back/Forward Button Stuck Skeleton (PUBLIC)   --}}
-{{-- ═══════════════════════════════════════════════════════════ --}}
-<script>
-    window.addEventListener('pageshow', function(event) {
-        // Deteksi Back/Forward navigation
-        // - event.persisted = true kalau dari bfcache (Chrome modern)
-        // - performance.navigation.type 2 = back_forward (fallback)
-        const isBackForward = event.persisted || 
-            (window.performance && 
-             window.performance.navigation && 
-             window.performance.navigation.type === 2);
-
-        // Juga cek: kalau nav-loading masih nyangkut, berarti perlu di-reset
-        const isStuck = document.documentElement.classList.contains('nav-loading') ||
-                        (document.getElementById('page-skeleton') && 
-                         !document.getElementById('page-skeleton').classList.contains('hidden'));
-
-        if (isBackForward || isStuck) {
-            console.log('[BFCACHE PUBLIC] Reset state — stuck detected or back/forward');
-
-            const content  = document.getElementById('page-content');
-            const skeleton = document.getElementById('page-skeleton');
-
-            // 1. Reset skeleton state
-            if (content)  content.classList.remove('hidden');
-            if (skeleton) skeleton.classList.add('hidden');
-
-            // 2. Hapus class nav-loading
-            document.documentElement.classList.remove('nav-loading');
-
-            // 3. Hapus spinner nyangkut
-            const oldSpinner = document.getElementById('nav-spinner');
-            if (oldSpinner && oldSpinner.parentNode) {
-                oldSpinner.parentNode.removeChild(oldSpinner);
-            }
-
-            // 4. Reset LoadingState timer
-            if (typeof LoadingState !== 'undefined' && LoadingState.cancel) {
-                LoadingState.cancel('nav');
-            }
-
-            // 5. Hapus flag navigasi
-            sessionStorage.removeItem('skandapras_nav');
-
-            // 6. Re-render Lucide icons
-            if (typeof lucide !== 'undefined') {
-                setTimeout(() => lucide.createIcons(), 100);
-            }
-        }
-    });
-</script>
-
     @stack('scripts')
 </body>
 

@@ -11,37 +11,6 @@
         <link rel="icon" href="{{ asset('storage/' . $logo) }}">
     @endif
 
-    <style>
-        .wave-divider {
-            position: absolute;
-            top: 0;
-            right: -1px;
-            height: 100%;
-            width: 120px;
-            z-index: 5;
-        }
-        @media (max-width: 1023px) {
-            .wave-divider { display: none; }
-        }
-        .input-underline {
-            border: none;
-            border-bottom: 1.5px solid #d4d4d8;
-            border-radius: 0;
-            padding-left: 0;
-            padding-right: 0;
-            background: transparent;
-            transition: border-color 0.2s ease;
-        }
-        .input-underline:focus {
-            outline: none;
-            border-bottom-color: #6C4AB6;
-            box-shadow: none;
-        }
-        .input-underline::placeholder {
-            color: #a1a1aa;
-            font-size: 13px;
-        }
-    </style>
 </head>
 <body class="min-h-screen bg-white font-sans antialiased lg:h-screen lg:overflow-hidden">
 
@@ -196,8 +165,6 @@
     </div>
 
 </div>
-
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
 </body>
 </html>

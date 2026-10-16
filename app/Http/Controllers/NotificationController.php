@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -69,7 +70,7 @@ class NotificationController extends Controller
         return back()->with('success', 'Semua notifikasi dihapus.');
     }
 
-    public function dropdown(): \Illuminate\Http\JsonResponse
+    public function dropdown(): JsonResponse
     {
         $user = auth()->user();
 
@@ -79,22 +80,22 @@ class NotificationController extends Controller
             ->get()
             ->map(function ($n) {
                 return [
-                    'id'         => $n->id,
-                    'title'      => $n->data['title'] ?? 'Notifikasi',
-                    'message'    => $n->data['message'] ?? '',
-                    'url'        => isset($n->data['url'])
+                    'id' => $n->id,
+                    'title' => $n->data['title'] ?? 'Notifikasi',
+                    'message' => $n->data['message'] ?? '',
+                    'url' => isset($n->data['url'])
                         ? route('notifications.read', $n->id)
                         : '#',
-                    'icon'       => $n->data['icon'] ?? 'bell',
-                    'color'      => $n->data['color'] ?? 'primary',
-                    'read'       => $n->read_at !== null,
+                    'icon' => $n->data['icon'] ?? 'bell',
+                    'color' => $n->data['color'] ?? 'primary',
+                    'read' => $n->read_at !== null,
                     'created_at' => $n->created_at->diffForHumans(),
                 ];
             });
 
         return response()->json([
             'notifications' => $notifications,
-            'unread_count'  => $user->unreadNotifications->count(),
+            'unread_count' => $user->unreadNotifications()->count(),
         ]);
     }
 }

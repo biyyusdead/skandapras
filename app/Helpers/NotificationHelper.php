@@ -26,8 +26,14 @@ class NotificationHelper
     /**
      * Kirim notifikasi ke user tertentu.
      */
-    public static function toUser(User $user, string $title, string $message, ?string $url = null, string $icon = 'bell', string $color = 'primary'): void
+    public static function toUser(?User $user, string $title, string $message, ?string $url = null, string $icon = 'bell', string $color = 'primary'): void
     {
+        if (! $user) {
+            \Log::info('[Notif] Skip — user null: '.$title);
+
+            return;
+        }
+
         $user->notify(new AppNotification($title, $message, $url, $icon, $color));
     }
 }

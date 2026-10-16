@@ -9,6 +9,7 @@ use App\Helpers\NotificationHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
 use App\Models\DamageReport;
+use App\Models\Room;
 use App\Traits\LogsActivity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,18 +31,25 @@ class DamageReportController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $statsRow = DamageReport::query()
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("COUNT(CASE WHEN status = 'menunggu_verifikasi' THEN 1 END) as menunggu")
+            ->selectRaw("COUNT(CASE WHEN status IN ('disetujui', 'siap_diperbaiki', 'diproses') THEN 1 END) as diproses")
+            ->selectRaw("COUNT(CASE WHEN status = 'selesai' THEN 1 END) as selesai")
+            ->first();
+
         $stats = [
-            'total'      => DamageReport::count(),
-            'menunggu'   => DamageReport::where('status', 'menunggu_verifikasi')->count(),
-            'diproses'   => DamageReport::whereIn('status', ['disetujui', 'siap_diperbaiki', 'diproses'])->count(),
-            'selesai'    => DamageReport::where('status', 'selesai')->count(),
+            'total' => (int) ($statsRow->total ?? 0),
+            'menunggu' => (int) ($statsRow->menunggu ?? 0),
+            'diproses' => (int) ($statsRow->diproses ?? 0),
+            'selesai' => (int) ($statsRow->selesai ?? 0),
         ];
 
         return view('waka.damage-reports.index', [
-            'reports'   => $reports,
-            'statuses'  => DamageReportStatus::cases(),
-            'stats'     => $stats,
-            'rooms'     => \App\Models\Room::orderBy('name')->get(['id', 'name']),
+            'reports' => $reports,
+            'statuses' => DamageReportStatus::cases(),
+            'stats' => $stats,
+            'rooms' => Room::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -65,17 +73,18 @@ class DamageReportController extends Controller
      */
     public function verify(Request $request, DamageReport $report): RedirectResponse
     {
-        abort_unless($report->status === DamageReportStatus::MENUNGGU_VERIFIKASI, 422, 'Laporan sudah diverifikasi.');
-
+        if ($report->status !== DamageReportStatus::MENUNGGU_VERIFIKASI) {
+            return back()->with('error', 'Laporan sudah diverifikasi atau bukan status menunggu verifikasi. Status saat ini: '.$report->status->label());
+        }
         $validated = $request->validate([
             'verification_note' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $report->update([
-            'status'           => DamageReportStatus::DIVERIFIKASI,
-            'verification_note'=> $validated['verification_note'] ?? null,
-            'verified_at'      => now(),
-            'verified_by'      => auth()->id(),
+            'status' => DamageReportStatus::DIVERIFIKASI,
+            'verification_note' => $validated['verification_note'] ?? null,
+            'verified_at' => now(),
+            'verified_by' => auth()->id(),
         ]);
 
         $this->logActivity('verify', 'damage-reports', "Memverifikasi laporan: {$report->report_code}");
@@ -90,11 +99,13 @@ class DamageReportController extends Controller
      */
     public function approve(Request $request, DamageReport $report): RedirectResponse
     {
-        abort_unless(
-            in_array($report->status, [DamageReportStatus::DIVERIFIKASI, DamageReportStatus::MENUNGGU_PERSETUJUAN_1]),
-            422,
-            'Laporan belum siap untuk disetujui.'
-        );
+        // Cek status — kalau belum diverifikasi, redirect + pesan jelas
+        if ($report->status === DamageReportStatus::MENUNGGU_VERIFIKASI) {
+            return back()->with('error', 'Laporan harus diverifikasi dulu sebelum disetujui.');
+        }
+        if (! in_array($report->status, [DamageReportStatus::DIVERIFIKASI, DamageReportStatus::MENUNGGU_PERSETUJUAN_1])) {
+            return back()->with('error', 'Laporan tidak bisa disetujui. Status saat ini: '.$report->status->label());
+        }
 
         $validated = $request->validate([
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -109,8 +120,8 @@ class DamageReportController extends Controller
             ['damage_report_id' => $report->id, 'approval_level' => 1],
             [
                 'approver_id' => auth()->id(),
-                'status'      => ApprovalStatus::APPROVED,
-                'notes'       => $validated['notes'] ?? null,
+                'status' => ApprovalStatus::APPROVED,
+                'notes' => $validated['notes'] ?? null,
                 'approved_at' => now(),
             ]
         );
@@ -151,21 +162,19 @@ class DamageReportController extends Controller
      */
     public function reject(Request $request, DamageReport $report): RedirectResponse
     {
-        abort_if(
-            in_array($report->status, [DamageReportStatus::SELESAI, DamageReportStatus::DITOLAK]),
-            422,
-            'Laporan sudah final.'
-        );
+        if (in_array($report->status, [DamageReportStatus::SELESAI, DamageReportStatus::DITOLAK])) {
+            return back()->with('error', 'Laporan sudah final dan tidak bisa ditolak lagi.');
+        }
 
         $validated = $request->validate([
             'notes' => ['required', 'string', 'max:1000'],
         ]);
 
         $report->update([
-            'status'           => DamageReportStatus::DITOLAK,
-            'verification_note'=> $validated['notes'],
-            'verified_at'      => $report->verified_at ?? now(),
-            'verified_by'      => $report->verified_by ?? auth()->id(),
+            'status' => DamageReportStatus::DITOLAK,
+            'verification_note' => $validated['notes'],
+            'verified_at' => $report->verified_at ?? now(),
+            'verified_by' => $report->verified_by ?? auth()->id(),
         ]);
 
         // Simpan approval level 1 rejected
@@ -173,8 +182,8 @@ class DamageReportController extends Controller
             ['damage_report_id' => $report->id, 'approval_level' => 1],
             [
                 'approver_id' => auth()->id(),
-                'status'      => ApprovalStatus::REJECTED,
-                'notes'       => $validated['notes'],
+                'status' => ApprovalStatus::REJECTED,
+                'notes' => $validated['notes'],
                 'approved_at' => now(),
             ]
         );

@@ -32,7 +32,7 @@ class RoomController extends Controller
 
         $room->load('items.category');
 
-        $search  = trim((string) $request->input('fas_q', ''));
+        $search = trim((string) $request->input('fas_q', ''));
         $perPage = 6;
 
         $items = $room->itemRooms()
@@ -48,7 +48,7 @@ class RoomController extends Controller
 
     public function map(Request $request): View
     {
-        $floor     = $request->input('floor');
+        $floor = $request->input('floor');
         $condition = $request->input('condition');
 
         // Marker 2D — tetap filter by map_x/map_y (untuk ditampilkan di denah)
@@ -64,20 +64,21 @@ class RoomController extends Controller
 
         // ⬇️ Data untuk JS — SEMUA ruangan aktif, bukan cuma yang punya marker
         $roomsForJs = Room::active()
+            ->select(['id', 'name', 'code', 'condition', 'map_floor', 'floor', 'description', 'capacity', 'health_score', 'photo'])
             ->get()
             ->map(fn ($r) => [
-                'id'             => $r->id,
-                'name'           => $r->name,
-                'code'           => $r->code,
-                'condition'      => $r->condition->value,
+                'id' => $r->id,
+                'name' => $r->name,
+                'code' => $r->code,
+                'condition' => $r->condition->value,
                 'conditionLabel' => $r->condition->label(),
-                'floor'          => $r->map_floor ?? $r->floor,
-                'description'    => $r->description,
-                'capacity'       => $r->capacity,
-                'health_score'   => $r->health_score,
-                'photo_url'      => $r->photo ? asset('storage/' . $r->photo) : null,
-                'detail_url'     => route('public.rooms.show', $r->code),
-                'report_url'     => route('public.sarpras.pengaduan', ['room_id' => $r->id]),
+                'floor' => $r->map_floor ?? $r->floor,
+                'description' => $r->description,
+                'capacity' => $r->capacity,
+                'health_score' => $r->health_score,
+                'photo_url' => $r->photo ? asset('storage/'.$r->photo) : null,
+                'detail_url' => route('public.rooms.show', $r->code),
+                'report_url' => route('public.sarpras.pengaduan', ['room_id' => $r->id]),
             ])->values()->all();
 
         $floors = Room::active()
@@ -86,24 +87,14 @@ class RoomController extends Controller
             ->orderBy('map_floor')
             ->pluck('map_floor');
 
-
-        $counts = Room::active()
-            ->whereNotNull('map_x')
-            ->whereNotNull('map_y')
-            ->selectRaw('
-                COUNT(*) as total,
-                SUM(CASE WHEN `condition` = "baik" THEN 1 ELSE 0 END) as baik,
-                SUM(CASE WHEN `condition` = "rusak_ringan" THEN 1 ELSE 0 END) as rusak_ringan,
-                SUM(CASE WHEN `condition` = "rusak_berat" THEN 1 ELSE 0 END) as rusak_berat
-            ')
-            ->first();
-
-        $stats = [
-            'total'        => (int) ($counts->total ?? 0),
-            'baik'         => (int) ($counts->baik ?? 0),
-            'rusak_ringan' => (int) ($counts->rusak_ringan ?? 0),
-            'rusak_berat'  => (int) ($counts->rusak_berat ?? 0),
-        ];
+            $stats = Room::where('is_active', 1)
+                ->whereNotNull('map_x')
+                ->whereNotNull('map_y')
+                ->selectRaw('COUNT(*) as total')
+                ->selectRaw("SUM(CASE WHEN `condition` = 'baik' THEN 1 ELSE 0 END) as baik")
+                ->selectRaw("SUM(CASE WHEN `condition` = 'rusak_ringan' THEN 1 ELSE 0 END) as rusak_ringan")
+                ->selectRaw("SUM(CASE WHEN `condition` = 'rusak_berat' THEN 1 ELSE 0 END) as rusak_berat")
+                ->first();
 
         return view('public.sarpras.peta', compact('rooms', 'roomsForJs', 'floors', 'floor', 'condition', 'stats'));
     }

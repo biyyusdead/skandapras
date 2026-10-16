@@ -36,14 +36,16 @@ return [
     ],
 
     'qwen' => [
-        'key'      => env('QWEN_API_KEY'),
-        'model'    => env('QWEN_MODEL', 'Qwen-3.8-Max'),
+        'key' => env('QWEN_API_KEY'),
+        'model' => env('QWEN_MODEL', 'Qwen-3.8-Max'),
         'base_url' => env('QWEN_BASE_URL', 'https://top-tools-ai.com/api/v1'),
     ],
 
-    'gemini' => [
-    'key'   => env('GEMINI_API_KEY'),
-    'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
-],
+    // Ganti jadi (atau tambah):
+    'rindri' => [
+        'key' => env('RINDRI_API_KEY'),
+        'base_url' => env('RINDRI_BASE_URL', 'https://api.rindri.com/v1'),
+        'model' => env('RINDRI_MODEL', 'claude-sonnet-4-5'),
+    ],
 
 ];

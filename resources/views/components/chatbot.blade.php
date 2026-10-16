@@ -3,13 +3,8 @@
     'title' => 'AI Assistant',
 ])
 
-<style>
-    [x-cloak] {
-        display: none !important
-    }
-</style>
-
 <div x-data="chatbot()" x-cloak 
+     data-chat-url="{{ route('public.chatbot.chat') }}"
      @keydown.escape.window="isOpen = false" 
      @click.outside="isOpen = false"
      @open-chatbot.window="if (!isOpen) toggle()"
@@ -175,113 +170,3 @@
         </span>
     </button>
 </div>
-
-
-{{-- Alpine.js hanya dimuat jika halaman belum punya --}}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        if (!window.Alpine) {
-            var s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js';
-            s.defer = true;
-            document.head.appendChild(s);
-        }
-    });
-
-    function chatbot() {
-        const greeting = {
-            role: 'bot',
-            title: 'Halo!',
-            text: 'Ada yang bisa saya bantu tentang SMK Negeri 2 Karanganyar?',
-        };
-
-        return {
-            isOpen: false,
-            typing: false,
-            draft: '',
-            suggestions: ['Berita terbaru?', 'Jurusan?', 'Sarpras?'],
-            messages: [greeting],
-
-            toggle() {
-                this.isOpen = !this.isOpen;
-                if (this.isOpen) {
-                    this.$nextTick(() => {
-                        this.scrollDown();
-                        this.$refs.input && this.$refs.input.focus();
-                    });
-                }
-            },
-
-            scrollDown() {
-                this.$nextTick(() => {
-                    const el = this.$refs.scroller;
-                    if (el) el.scrollTop = el.scrollHeight;
-                });
-            },
-
-            clearChat() {
-                this.messages = [greeting];
-                this.typing = false;
-                this.draft = '';
-            },
-
-            async send(text) {
-                const msg = (text || this.draft).trim();
-                if (!msg || this.typing) return;
-
-                const history = this.buildHistory();
-
-                this.messages.push({ role: 'user', text: msg });
-                this.draft = '';
-                this.typing = true;
-                this.scrollDown();
-
-                const result = await this.getReply(msg, history);
-
-                this.typing = false;
-                this.messages.push({ role: 'bot', text: result.text, error: result.error });
-                this.scrollDown();
-            },
-
-            buildHistory() {
-                return this.messages
-                    .slice(1)
-                    .filter(m => !m.error)
-                    .slice(-20)
-                    .map(m => ({
-                        role: m.role === 'user' ? 'user' : 'assistant',
-                        text: m.text,
-                    }));
-            },
-
-            async getReply(msg, history = []) {
-                try {
-                    const response = await fetch('{{ route('public.chatbot.chat') }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        },
-                        body: JSON.stringify({ message: msg, history }),
-                    });
-
-                    if (response.status === 429) {
-                        return { text: 'Terlalu banyak pertanyaan. Coba lagi sebentar ya.', error: true };
-                    }
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        return { text: data.message || 'Maaf, terjadi kesalahan.', error: true };
-                    }
-
-                    return { text: data.reply || 'Maaf, saya belum mendapatkan jawaban.', error: !data.reply };
-                } catch (error) {
-                    console.error(error);
-                    return { text: 'Maaf, terjadi masalah saat menghubungi server.', error: true };
-                }
-            },
-        };
-    }
-</script>

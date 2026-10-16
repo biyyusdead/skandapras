@@ -33,17 +33,24 @@ class RepairReportController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $statsRow = RepairReport::query()
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("COUNT(CASE WHEN status = 'ready' THEN 1 END) as ready")
+            ->selectRaw("COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress")
+            ->selectRaw("COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed")
+            ->first();
+
         $stats = [
-            'total'       => RepairReport::count(),
-            'ready'       => RepairReport::where('status', 'ready')->count(),
-            'in_progress' => RepairReport::where('status', 'in_progress')->count(),
-            'completed'   => RepairReport::where('status', 'completed')->count(),
+            'total' => (int) ($statsRow->total ?? 0),
+            'ready' => (int) ($statsRow->ready ?? 0),
+            'in_progress' => (int) ($statsRow->in_progress ?? 0),
+            'completed' => (int) ($statsRow->completed ?? 0),
         ];
 
         return view('waka.repair-reports.index', [
-            'repairs'  => $repairs,
+            'repairs' => $repairs,
             'statuses' => RepairStatus::cases(),
-            'stats'    => $stats,
+            'stats' => $stats,
         ]);
     }
 
@@ -75,14 +82,14 @@ class RepairReportController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'damage_report_id'        => ['required', 'exists:damage_reports,id'],
-            'technician_name'         => ['required', 'string', 'max:255'],
-            'technician_contact'      => ['nullable', 'string', 'max:255'],
-            'repair_description'      => ['nullable', 'string', 'max:2000'],
-            'repair_cost'             => ['nullable', 'numeric', 'min:0'],
-            'started_at'              => ['nullable', 'date'],
-            'repair_evidence_before'  => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
-            'notes'                   => ['nullable', 'string', 'max:1000'],
+            'damage_report_id' => ['required', 'exists:damage_reports,id'],
+            'technician_name' => ['required', 'string', 'max:255'],
+            'technician_contact' => ['nullable', 'string', 'max:255'],
+            'repair_description' => ['nullable', 'string', 'max:2000'],
+            'repair_cost' => ['nullable', 'numeric', 'min:0'],
+            'started_at' => ['nullable', 'date'],
+            'repair_evidence_before' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $report = DamageReport::findOrFail($validated['damage_report_id']);
@@ -91,7 +98,7 @@ class RepairReportController extends Controller
         abort_unless($report->canBeRepaired(), 403, 'Laporan belum disetujui kedua tahap.');
 
         $validated['created_by'] = auth()->id();
-        $validated['status']     = RepairStatus::IN_PROGRESS;
+        $validated['status'] = RepairStatus::IN_PROGRESS;
 
         if ($request->hasFile('repair_evidence_before')) {
             $validated['repair_evidence_before'] = handle_upload($request->file('repair_evidence_before'), 'repairs');
@@ -125,16 +132,16 @@ class RepairReportController extends Controller
     public function update(Request $request, RepairReport $repair): RedirectResponse
     {
         $validated = $request->validate([
-            'technician_name'        => ['required', 'string', 'max:255'],
-            'technician_contact'     => ['nullable', 'string', 'max:255'],
-            'repair_description'     => ['nullable', 'string', 'max:2000'],
-            'repair_cost'            => ['nullable', 'numeric', 'min:0'],
-            'started_at'             => ['nullable', 'date'],
-            'completed_at'           => ['nullable', 'date'],
+            'technician_name' => ['required', 'string', 'max:255'],
+            'technician_contact' => ['nullable', 'string', 'max:255'],
+            'repair_description' => ['nullable', 'string', 'max:2000'],
+            'repair_cost' => ['nullable', 'numeric', 'min:0'],
+            'started_at' => ['nullable', 'date'],
+            'completed_at' => ['nullable', 'date'],
             'repair_evidence_before' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
-            'repair_evidence_after'  => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
-            'status'                 => ['required', 'in:ready,in_progress,completed'],
-            'notes'                  => ['nullable', 'string', 'max:1000'],
+            'repair_evidence_after' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
+            'status' => ['required', 'in:ready,in_progress,completed'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         if ($request->hasFile('repair_evidence_before')) {
@@ -197,8 +204,12 @@ class RepairReportController extends Controller
     {
         $code = $repair->damageReport->report_code;
 
-        if ($repair->repair_evidence_before) Storage::disk('public')->delete($repair->repair_evidence_before);
-        if ($repair->repair_evidence_after) Storage::disk('public')->delete($repair->repair_evidence_after);
+        if ($repair->repair_evidence_before) {
+            Storage::disk('public')->delete($repair->repair_evidence_before);
+        }
+        if ($repair->repair_evidence_after) {
+            Storage::disk('public')->delete($repair->repair_evidence_after);
+        }
 
         $repair->delete();
 
