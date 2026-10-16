@@ -42,8 +42,6 @@ use App\Http\Controllers\Kepala;
         Route::resource('admissions',       Admin\AdmissionController::class)->except(['show']);
         Route::resource('news',             Admin\NewsController::class)->except(['show']);
         Route::resource('alumni',           Admin\AlumniController::class)->except(['show']);
-
-
         Route::get('logs', [Admin\ActivityLogController::class, 'index'])->name('logs.index');
     });
 

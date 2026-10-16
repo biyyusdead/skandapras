@@ -13,11 +13,14 @@ class TeacherController extends Controller
     {
         $teachers = Teacher::query()
             ->where('is_active', true)
-            ->when($request->search, fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
-                ->orWhere('nip', 'like', "%{$s}%"))
+            ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                ->orWhere('nip', 'like', "%{$s}%");
+            }))
             ->when($request->competency, fn ($q, $c) => $q->where('competency', $c))
             ->orderBy('name')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         $competencies = Teacher::where('is_active', true)
             ->whereNotNull('competency')

@@ -2,10 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Achievement;
+use App\Models\Admission;
 use App\Models\Department;
+use App\Models\Extracurricular;
+use App\Models\FeaturedProduct;
+use App\Models\Internship;
 use App\Models\News;
 use App\Models\Room;
 use App\Models\SchoolProfile;
+use App\Models\SchoolRule;
+use App\Models\Teacher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -18,8 +25,8 @@ class ChatbotController extends Controller
     public function chat(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'message'        => 'required|string|max:500',
-            'history'        => 'nullable|array|max:20',
+            'message' => 'required|string|max:500',
+            'history' => 'nullable|array|max:20',
             'history.*.role' => 'required|in:user,assistant',
             'history.*.text' => 'required|string|max:4000',
         ]);
@@ -30,7 +37,7 @@ class ChatbotController extends Controller
         try {
             $reply = $this->askGemini($message, $history);
         } catch (\Throwable $e) {
-            Log::error('Chatbot Gemini error: ' . $e->getMessage());
+            Log::error('Chatbot Gemini error: '.$e->getMessage());
             $reply = $this->fallbackReply($message);
         }
 
@@ -40,62 +47,55 @@ class ChatbotController extends Controller
     /** History harus diawali 'user' (OpenAI format). */
     protected function cleanHistory(array $history): array
     {
-        while (!empty($history) && $history[0]['role'] !== 'user') {
+        while (! empty($history) && $history[0]['role'] !== 'user') {
             array_shift($history);
         }
+
         return array_values($history);
     }
 
     protected function askGemini(string $message, array $history): string
     {
-        // Gemini pakai format contents, bukan messages
-        $contents = [];
-
-        // System prompt masuk ke systemInstruction (terpisah)
         $systemPrompt = $this->systemPrompt($message);
 
-        // Convert history ke format Gemini
+        // Format pesan untuk OpenAI-compatible API
+        $messages = [
+            ['role' => 'system', 'content' => $systemPrompt],
+        ];
+
+        // Tambahkan history
         foreach ($history as $h) {
-            $contents[] = [
-                'role'  => $h['role'] === 'assistant' ? 'model' : 'user',
-                'parts' => [['text' => $h['text']]],
+            $messages[] = [
+                'role' => $h['role'] === 'assistant' ? 'assistant' : 'user',
+                'content' => $h['text'],
             ];
         }
 
         // Pesan user terakhir
-        $contents[] = [
-            'role'  => 'user',
-            'parts' => [['text' => $message]],
-        ];
+        $messages[] = ['role' => 'user', 'content' => $message];
 
         $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-                'X-goog-api-key' => config('services.gemini.key'),
-            ])
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Bearer '.config('services.rindri.key'),
+        ])
             ->connectTimeout(10)
             ->timeout(90)
             ->post(
-                'https://generativelanguage.googleapis.com/v1beta/models/'
-                    . config('services.gemini.model')
-                    . ':generateContent',
+                rtrim(config('services.rindri.base_url'), '/').'/chat/completions',
                 [
-                    'system_instruction' => [
-                        'parts' => [['text' => $systemPrompt]],
-                    ],
-                    'contents' => $contents,
-                    'generationConfig' => [
-                        'temperature'     => 0.3,
-                        'maxOutputTokens' => 1500,
-                    ],
+                    'model' => config('services.rindri.model'),
+                    'messages' => $messages,
+                    'temperature' => 0.3,
+                    'max_tokens' => 1500,
                 ]
             );
 
-        if (!$response->successful()) {
-            Log::warning('Gemini gagal (' . $response->status() . '): ' . $response->body());
-            throw new \RuntimeException('Gemini API gagal: ' . $response->status());
+        if (! $response->successful()) {
+            Log::warning('Rindri gagal ('.$response->status().'): '.$response->body());
+            throw new \RuntimeException('Rindri API gagal: '.$response->status());
         }
 
-        $text = $response->json('candidates.0.content.parts.0.text', '');
+        $text = $response->json('choices.0.message.content', '');
 
         return trim($text) !== ''
             ? trim($text)
@@ -105,25 +105,26 @@ class ChatbotController extends Controller
     protected function systemPrompt(string $message): string
     {
         $contexts = [
-            'sekolah'          => $this->schoolContext(),
-            'jurusan'          => $this->departmentContext(),
-            'ekskul'           => $this->extracurricularContext(),
-            'prestasi'         => $this->achievementContext(),
-            'pkl_bkk'          => $this->internshipContext(),
-            'tata_tertib'      => $this->schoolRuleContext(),
-            'ruangan'          => $this->roomContext(),
-            'guru'             => $this->teacherContext(),
-            'spmb'             => $this->admissionContext(),
-            'produk_unggulan'  => $this->productContext(),
-            'sejarah'          => $this->historyContext(),
-            'sambutan_kepsek'  => $this->principalMessageContext(),
-            'berita'           => $this->newsContext($message),
-            'info_khusus'      => $this->specialInfoContext(), 
+            'sekolah' => $this->schoolContext(),
+            'jurusan' => $this->departmentContext(),
+            'ekskul' => $this->extracurricularContext(),
+            'prestasi' => $this->achievementContext(),
+            'pkl_bkk' => $this->internshipContext(),
+            'tata_tertib' => $this->schoolRuleContext(),
+            'ruangan' => $this->roomContext(),
+            'guru' => $this->teacherContext(),
+            'spmb' => $this->admissionContext(),
+            'produk_unggulan' => $this->productContext(),
+            'sejarah' => $this->historyContext(),
+            'sambutan_kepsek' => $this->principalMessageContext(),
+            'berita' => $this->newsContext($message),
+            'peta_3d' => $this->map3DContext(),           // ← BARU
+            'fasilitas_unggulan' => $this->featuredFacilitiesContext(), // ← BARU
         ];
 
         $contextText = collect($contexts)
             ->filter()
-            ->map(fn ($val, $key) => "=== " . strtoupper(str_replace('_', ' ', $key)) . " ===\n" . $val)
+            ->map(fn ($val, $key) => '=== '.strtoupper(str_replace('_', ' ', $key))." ===\n".$val)
             ->implode("\n\n");
 
         return <<<PROMPT
@@ -152,51 +153,59 @@ class ChatbotController extends Controller
     - Ekstrakurikuler: menu Kesiswaan -> Ekstrakurikuler
     - Tata Tertib: menu Kesiswaan -> Tata Tertib
     - PKL & BKK: menu Kesiswaan -> PKL & BKK
-    - Sarpras/Ruangan: menu Sarpras
+    - Daftar Ruangan: menu Sarpras -> Daftar Ruangan
+    - Peta Interaktif (2D & 3D): menu Sarpras -> Peta Sekolah
+    - Buat Laporan Kerusakan: menu Sarpras -> Buat Laporan
     - Berita: menu Berita
+
+    PANDUAN PETA 3D:
+    - Peta 3D bisa diakses di menu Sarpras -> Peta Sekolah, lalu pilih tab "Model 3D".
+    - Di mode 3D, pengguna bisa memutar kamera dengan drag, zoom dengan scroll, klik gedung untuk detail ruangan.
+    - Ada fitur "Pencari Rute" untuk cari jalur dari satu ruangan ke ruangan lain.
+    - Ada fitur "Daftar Ruangan" untuk melihat semua ruangan yang ada di peta 3D.
+    - Rute antar lantai akan otomatis lewat tangga, dengan tanda panah NAIK atau TURUN.
     PROMPT;
     }
 
     protected function schoolContext(): string
     {
         return Cache::remember('chatbot_school_context', 600, function () {
-            $school      = SchoolProfile::current();
+            $school = SchoolProfile::current();
             $departments = Department::active()->pluck('name')->implode(', ');
-            $rooms       = Room::active()->count();
+            $rooms = Room::active()->count();
 
-            if (!$school) {
+            if (! $school) {
                 return 'Data sekolah belum diisi.';
             }
 
             $lines = [];
-
-            $lines[] = "Nama Sekolah: " . ($school->school_name ?? '-');
-            $lines[] = "NPSN: " . ($school->npsn ?? '-');
-            $lines[] = "NSS: " . ($school->nss ?? '-');
-            $lines[] = "Akreditasi: " . ($school->accreditation ?? '-');
-            $lines[] = "Jenjang: " . ($school->education_level ?? '-');
-            $lines[] = "Status: " . ($school->status ?? '-');
-            $lines[] = "Alamat: " . ($school->address ?? '-');
-            $lines[] = "Kode Pos: " . ($school->postal_code ?? '-');
-            $lines[] = "Telepon: " . ($school->phone ?? '-');
-            $lines[] = "Fax: " . ($school->fax ?? '-');
-            $lines[] = "Email: " . ($school->email ?? '-');
-            $lines[] = "Kepala Sekolah: " . ($school->principal_name ?? '-');
-            $lines[] = "Jam Belajar: " . ($school->study_hours ?? '-');
+            $lines[] = 'Nama Sekolah: '.($school->school_name ?? '-');
+            $lines[] = 'NPSN: '.($school->npsn ?? '-');
+            $lines[] = 'NSS: '.($school->nss ?? '-');
+            $lines[] = 'Akreditasi: '.($school->accreditation ?? '-');
+            $lines[] = 'Jenjang: '.($school->education_level ?? '-');
+            $lines[] = 'Status: '.($school->status ?? '-');
+            $lines[] = 'Alamat: '.($school->address ?? '-');
+            $lines[] = 'Kode Pos: '.($school->postal_code ?? '-');
+            $lines[] = 'Telepon: '.($school->phone ?? '-');
+            $lines[] = 'Fax: '.($school->fax ?? '-');
+            $lines[] = 'Email: '.($school->email ?? '-');
+            $lines[] = 'Kepala Sekolah: '.($school->principal_name ?? '-');
+            $lines[] = 'Jam Belajar: '.($school->study_hours ?? '-');
 
             if ($school->description) {
-                $lines[] = "Deskripsi Sekolah: " . Str::limit(strip_tags($school->description), 400);
+                $lines[] = 'Deskripsi Sekolah: '.Str::limit(strip_tags($school->description), 400);
             }
 
             if ($school->vision) {
-                $lines[] = "Visi: " . $school->vision;
+                $lines[] = 'Visi: '.$school->vision;
             }
 
             if ($school->mission) {
-                $lines[] = "Misi: " . str_replace("\n", " | ", $school->mission);
+                $lines[] = 'Misi: '.str_replace("\n", ' | ', $school->mission);
             }
 
-            $lines[] = "Daftar Jurusan: " . ($departments ?: '-');
+            $lines[] = 'Daftar Jurusan: '.($departments ?: '-');
             $lines[] = "Jumlah Ruangan Aktif: {$rooms}";
 
             return implode("\n", $lines);
@@ -208,7 +217,7 @@ class ChatbotController extends Controller
         return Cache::remember('chatbot_history_context', 600, function () {
             $school = SchoolProfile::current();
 
-            if (!$school || !$school->history) {
+            if (! $school || ! $school->history) {
                 return '';
             }
 
@@ -221,20 +230,104 @@ class ChatbotController extends Controller
         return Cache::remember('chatbot_principal_message_context', 600, function () {
             $school = SchoolProfile::current();
 
-            if (!$school || !$school->principal_message) {
+            if (! $school || ! $school->principal_message) {
                 return '';
             }
 
-            $info = "Kepala Sekolah: " . ($school->principal_name ?? '-');
-            $info .= "\nIsi Sambutan: " . Str::limit(trim(strip_tags($school->principal_message)), 800);
+            $info = 'Kepala Sekolah: '.($school->principal_name ?? '-');
+            $info .= "\nIsi Sambutan: ".Str::limit(trim(strip_tags($school->principal_message)), 800);
 
             return $info;
         });
     }
 
-    protected function specialInfoContext(): string
+    protected function map3DContext(): string
     {
-        return "Bapak dari Rafi adalah Larno.";
+        $t = [];
+        $t[] = 'FITUR PETA INTERAKTIF 3D:';
+        $t[] = '';
+        $t[] = 'Peta 3D menampilkan seluruh gedung dan lapangan SMK Negeri 2 Karanganyar dalam bentuk model 3 dimensi.';
+        $t[] = '';
+        $t[] = 'Cara akses:';
+        $t[] = '- Buka menu Sarpras -> Peta Sekolah';
+        $t[] = '- Pilih tab Model 3D di bagian atas';
+        $t[] = '';
+        $t[] = 'Cara pakai:';
+        $t[] = '- Drag kiri: memutar kamera';
+        $t[] = '- Drag kanan atau Shift + drag: menggeser kamera';
+        $t[] = '- Scroll atau cubit: zoom in / zoom out';
+        $t[] = '- Klik gedung: melihat detail ruangan';
+        $t[] = '- Label nama gedung muncul otomatis di atas bangunan';
+        $t[] = '';
+        $t[] = 'FITUR PENCARI RUTE:';
+        $t[] = '- Pilih ruangan awal dan tujuan dari dropdown';
+        $t[] = '- Klik Cari Rute untuk melihat jalur';
+        $t[] = '- Rute ditampilkan sebagai garis cyan di peta 3D';
+        $t[] = '- Rute antar lantai akan lewat tangga dengan penanda NAIK atau TURUN';
+        $t[] = '';
+        $t[] = 'FITUR DAFTAR RUANGAN:';
+        $t[] = '- Klik tombol Daftar Ruangan di dalam peta 3D';
+        $t[] = '- Semua ruangan ditampilkan dalam bentuk daftar';
+        $t[] = '- Ada pencarian untuk cari ruangan cepat';
+        $t[] = '- Klik nama ruangan untuk fokus kamera + lihat detail';
+        $t[] = '';
+        $t[] = 'Peta 2D juga tersedia dengan marker warna sesuai kondisi ruangan: hijau baik, kuning rusak ringan, merah rusak berat.';
+
+        return implode("\n", $t);
+    }
+
+    protected function featuredFacilitiesContext(): string
+    {
+        $t = [];
+        $t[] = 'FASILITAS UNGGULAN SMK NEGERI 2 KARANGANYAR:';
+        $t[] = '';
+        $t[] = '1. LAPANGAN UTAMA - Sepak Bola & Atletik';
+        $t[] = '   Lokasi: sisi timur kampus';
+        $t[] = '   Fasilitas: lapangan rumput, lintasan lari, 2 gawang, tribun, lampu sorot.';
+        $t[] = '';
+        $t[] = '2. LAPANGAN BASKET';
+        $t[] = '   Fasilitas: hardcourt basket, 2 ring papan akrilik.';
+        $t[] = '';
+        $t[] = '3. LAPANGAN BOLA VOLI';
+        $t[] = '   Fasilitas: tiang dan net standar PBVSI.';
+        $t[] = '';
+        $t[] = '4. LAPANGAN UPACARA (Lapangan Tengah)';
+        $t[] = '   Lokasi: tengah kampus';
+        $t[] = '   Fasilitas: tiang bendera, podium, sound system, marka paving.';
+        $t[] = '';
+        $t[] = '5. MASJID AL-AMANAH';
+        $t[] = '   Fasilitas: ruang ibadah ber-AC, tempat wudhu, mimbar, sound system, rak Al-Quran.';
+        $t[] = '';
+        $t[] = '6. LAB RPL / PPLG';
+        $t[] = '   Fasilitas: 36 PC high-end, jaringan gigabit, smart TV 65 inch, AC, server lokal.';
+        $t[] = '';
+        $t[] = '7. LAB CAD/CAM & MESIN CNC';
+        $t[] = '   Fasilitas: mesin CNC milling & turning, workstation CAD/CAM, simulator Fanuc & Siemens.';
+        $t[] = '';
+        $t[] = '8. BENGKEL OTOMOTIF';
+        $t[] = '   Fasilitas: car lift, engine stand, scanner OBD-II, tire changer, wheel balancer.';
+        $t[] = '';
+        $t[] = '9. BENGKEL TEKSTIL';
+        $t[] = '   Fasilitas: mesin tenun, ATBM, mesin pemintal, lab uji tarik serat, bak pencelupan.';
+        $t[] = '';
+        $t[] = '10. PERPUSTAKAAN';
+        $t[] = '    Fasilitas: 5000+ buku, katalog OPAC, area baca, ruang diskusi, WiFi, e-book.';
+        $t[] = '';
+        $t[] = '11. RUANG UKS';
+        $t[] = '    Fasilitas: 3 tempat tidur, P3K, tensimeter, tabung oksigen, timbangan.';
+        $t[] = '';
+        $t[] = '12. KANTIN';
+        $t[] = '    Fasilitas: stan makanan higienis, meja kursi, wastafel, tempat sampah terpilah.';
+        $t[] = '';
+        $t[] = '13. KOPERASI SISWA';
+        $t[] = '    Fasilitas: menjual alat tulis, seragam, snack, kebutuhan siswa.';
+        $t[] = '';
+        $t[] = '14. LAPANGAN TENIS-BASKET';
+        $t[] = '    Fasilitas: lapangan multifungsi dengan garis tenis dan basket.';
+        $t[] = '';
+        $t[] = 'Lihat lokasi semua fasilitas di menu Sarpras -> Peta Sekolah -> tab Model 3D.';
+
+        return implode("\n", $t);
     }
 
     protected function newsContext(string $message): string
@@ -242,13 +335,13 @@ class ChatbotController extends Controller
         $keywords = $this->extractKeywords($message);
 
         $matched = collect();
-        if (!empty($keywords)) {
+        if (! empty($keywords)) {
             $matched = News::published()
                 ->where(function ($q) use ($keywords) {
                     foreach ($keywords as $word) {
-                        $like = '%' . addcslashes($word, '%_\\') . '%';
+                        $like = '%'.addcslashes($word, '%_\\').'%';
                         $q->orWhere('title', 'like', $like)
-                          ->orWhere('content', 'like', $like);
+                            ->orWhere('content', 'like', $like);
                     }
                 })
                 ->latest('published_at')
@@ -271,13 +364,13 @@ class ChatbotController extends Controller
             $isi = Str::limit(trim(preg_replace('/\s+/', ' ', strip_tags(html_entity_decode($n->content)))), 500);
 
             return "- Judul: {$n->title}\n"
-                 . "  Tanggal: {$n->published_at?->translatedFormat('d F Y')}\n"
-                 . '  Link: ' . route('public.news.show', $n->slug) . "\n"
-                 . "  Isi: {$isi}";
+                 ."  Tanggal: {$n->published_at?->translatedFormat('d F Y')}\n"
+                 .'  Link: '.route('public.news.show', $n->slug)."\n"
+                 ."  Isi: {$isi}";
         })->implode("\n\n");
     }
 
-        protected function departmentContext(): string
+    protected function departmentContext(): string
     {
         return Cache::remember('chatbot_department_context', 600, function () {
             $departments = Department::active()->get(['name', 'code', 'description']);
@@ -286,8 +379,7 @@ class ChatbotController extends Controller
                 return 'Belum ada data jurusan.';
             }
 
-            return $departments->map(fn ($d) =>
-                "- {$d->name} ({$d->code}): " . Str::limit(strip_tags($d->description), 200)
+            return $departments->map(fn ($d) => "- {$d->name} ({$d->code}): ".Str::limit(strip_tags($d->description), 200)
             )->implode("\n");
         });
     }
@@ -295,14 +387,13 @@ class ChatbotController extends Controller
     protected function extracurricularContext(): string
     {
         return Cache::remember('chatbot_ekskul_context', 600, function () {
-            $items = \App\Models\Extracurricular::active()->get(['name', 'description']);
+            $items = Extracurricular::active()->get(['name', 'description']);
 
             if ($items->isEmpty()) {
                 return 'Belum ada data ekstrakurikuler.';
             }
 
-            return $items->map(fn ($e) =>
-                "- {$e->name}: " . Str::limit(strip_tags($e->description), 150)
+            return $items->map(fn ($e) => "- {$e->name}: ".Str::limit(strip_tags($e->description), 150)
             )->implode("\n");
         });
     }
@@ -310,14 +401,13 @@ class ChatbotController extends Controller
     protected function achievementContext(): string
     {
         return Cache::remember('chatbot_achievement_context', 600, function () {
-            $items = \App\Models\Achievement::latest('achievement_date')->take(10)->get();
+            $items = Achievement::latest('achievement_date')->take(10)->get();
 
             if ($items->isEmpty()) {
                 return 'Belum ada data prestasi.';
             }
 
-            return $items->map(fn ($a) =>
-                "- {$a->title} ({$a->category}) — {$a->achievement_date?->translatedFormat('d F Y')}"
+            return $items->map(fn ($a) => "- {$a->title} ({$a->category}) — {$a->achievement_date?->translatedFormat('d F Y')}"
             )->implode("\n");
         });
     }
@@ -325,14 +415,13 @@ class ChatbotController extends Controller
     protected function internshipContext(): string
     {
         return Cache::remember('chatbot_internship_context', 600, function () {
-            $items = \App\Models\Internship::active()->get(['title', 'company', 'start_date', 'end_date']);
+            $items = Internship::active()->get(['title', 'company', 'start_date', 'end_date']);
 
             if ($items->isEmpty()) {
                 return 'Belum ada data PKL & BKK.';
             }
 
-            return $items->map(fn ($i) =>
-                "- {$i->title}" . ($i->company ? " di {$i->company}" : '')
+            return $items->map(fn ($i) => "- {$i->title}".($i->company ? " di {$i->company}" : '')
             )->implode("\n");
         });
     }
@@ -340,7 +429,7 @@ class ChatbotController extends Controller
     protected function schoolRuleContext(): string
     {
         return Cache::remember('chatbot_rules_context', 600, function () {
-            $items = \App\Models\SchoolRule::active()->get(['title']);
+            $items = SchoolRule::active()->get(['title']);
 
             if ($items->isEmpty()) {
                 return 'Belum ada data tata tertib.';
@@ -371,34 +460,34 @@ class ChatbotController extends Controller
 
             if ($panoramaRooms->isNotEmpty()) {
                 $names = $panoramaRooms->pluck('name')->take(10)->implode(', ');
-                $header .= " {$panoramaRooms->count()} ruangan memiliki virtual tour 360°: {$names}" .
-                        ($panoramaRooms->count() > 10 ? " (dan lainnya)" : "") . ".";
+                $header .= " {$panoramaRooms->count()} ruangan memiliki virtual tour 360°: {$names}".
+                        ($panoramaRooms->count() > 10 ? ' (dan lainnya)' : '').'.';
             } else {
-                $header .= " Belum ada ruangan dengan virtual tour 360°.";
+                $header .= ' Belum ada ruangan dengan virtual tour 360°.';
             }
 
             $list = $rooms->take(30)->map(function ($r) {
                 $line = "- {$r->name} ({$r->code}), lantai {$r->floor}, kapasitas {$r->capacity} orang, kondisi: {$r->condition->label()}";
 
                 if ($r->panorama) {
-                    $line .= " [Tersedia Virtual Tour 360°]";
+                    $line .= ' [Tersedia Virtual Tour 360°]';
                 }
 
                 return $line;
             })->implode("\n");
 
-            $more = $rooms->count() > 30 ? "\n... (dan " . ($rooms->count() - 30) . " lainnya)" : '';
+            $more = $rooms->count() > 30 ? "\n... (dan ".($rooms->count() - 30).' lainnya)' : '';
 
-            return $header . "\n\nDaftar:\n" . $list . $more;
+            return $header."\n\nDaftar:\n".$list.$more;
         });
     }
 
     protected function teacherContext(): string
     {
         return Cache::remember('chatbot_teacher_context', 600, function () {
-            $count = \App\Models\Teacher::where('is_active', true)->count();
+            $count = Teacher::where('is_active', true)->count();
 
-            $samples = \App\Models\Teacher::where('is_active', true)
+            $samples = Teacher::where('is_active', true)
                 ->whereNotNull('position')
                 ->take(10)
                 ->get(['name', 'position']);
@@ -412,31 +501,30 @@ class ChatbotController extends Controller
     protected function admissionContext(): string
     {
         return Cache::remember('chatbot_admission_context', 600, function () {
-            $admission = \App\Models\Admission::active()->latest()->first();
+            $admission = Admission::active()->latest()->first();
 
-            if (!$admission) {
+            if (! $admission) {
                 return 'Belum ada data SPMB.';
             }
 
             return "Judul: {$admission->title}\n"
-                . "Deskripsi: " . Str::limit($admission->description, 300) . "\n"
-                . "Persyaratan: " . Str::limit($admission->requirements, 400) . "\n"
-                . "Jadwal: " . Str::limit($admission->schedule, 300) . "\n"
-                . "Link resmi: {$admission->official_link}";
+                .'Deskripsi: '.Str::limit($admission->description, 300)."\n"
+                .'Persyaratan: '.Str::limit($admission->requirements, 400)."\n"
+                .'Jadwal: '.Str::limit($admission->schedule, 300)."\n"
+                ."Link resmi: {$admission->official_link}";
         });
     }
 
     protected function productContext(): string
     {
         return Cache::remember('chatbot_product_context', 600, function () {
-            $items = \App\Models\FeaturedProduct::active()->get(['name', 'description', 'category']);
+            $items = FeaturedProduct::active()->get(['name', 'description', 'category']);
 
             if ($items->isEmpty()) {
                 return 'Belum ada data produk unggulan.';
             }
 
-            return $items->map(fn ($p) =>
-                "- {$p->name}" . ($p->category ? " ({$p->category})" : '') . ": " . Str::limit(strip_tags($p->description), 120)
+            return $items->map(fn ($p) => "- {$p->name}".($p->category ? " ({$p->category})" : '').': '.Str::limit(strip_tags($p->description), 120)
             )->implode("\n");
         });
     }
@@ -465,7 +553,8 @@ class ChatbotController extends Controller
         $latest = News::published()->latest('published_at')->take(3)->get(['title', 'slug']);
 
         if ($latest->isNotEmpty() && Str::contains(Str::lower($message), ['berita', 'artikel'])) {
-            $list = $latest->map(fn ($n) => '- ' . $n->title . ' → ' . route('public.news.show', $n->slug))->implode("\n");
+            $list = $latest->map(fn ($n) => '- '.$n->title.' → '.route('public.news.show', $n->slug))->implode("\n");
+
             return "Berita terbaru:\n{$list}";
         }
 

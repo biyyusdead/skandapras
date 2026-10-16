@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>500 — Terjadi Kesalahan</title>
-    @vite(['resources/css/app.css'])
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-gradient-to-br from-red-50 via-white to-orange-50
              font-sans text-surface-800 antialiased">

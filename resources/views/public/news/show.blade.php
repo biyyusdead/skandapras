@@ -130,7 +130,7 @@
                            aria-label="Bagikan ke Facebook"
                            class="w-9 h-9 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600
                                   flex items-center justify-center transition-colors">
-                            <i data-lucide="facebook" class="w-4 h-4"></i>
+                            <i class="bi bi-facebook text-base"></i>
                         </a>
 
                         <a href="https://twitter.com/intent/tweet?url={{ $shareUrl }}&text={{ $shareTitle }}"
@@ -138,7 +138,7 @@
                            aria-label="Bagikan ke Twitter"
                            class="w-9 h-9 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-500
                                   flex items-center justify-center transition-colors">
-                            <i data-lucide="twitter" class="w-4 h-4"></i>
+                            <i class="bi bi-twitter-x text-base"></i>
                         </a>
 
                         <a href="https://wa.me/?text={{ $shareTitle }}%20{{ $shareUrl }}"
@@ -146,7 +146,7 @@
                            aria-label="Bagikan ke WhatsApp"
                            class="w-9 h-9 rounded-full bg-green-50 hover:bg-green-100 text-green-600
                                   flex items-center justify-center transition-colors">
-                            <i data-lucide="message-circle" class="w-4 h-4"></i>
+                            <i class="bi bi-whatsapp text-base"></i>
                         </a>
 
                         <button type="button"

@@ -16,7 +16,7 @@ class AchievementController extends Controller
             ->when($request->category, fn ($q, $c) => $q->where('category', $c))
             ->when($request->year, fn ($q, $y) => $q->whereYear('achievement_date', $y))
             ->latest('achievement_date')
-            ->paginate(12)
+            ->paginate(8)
             ->withQueryString();
 
         $categories = Achievement::distinct()->whereNotNull('category')->orderBy('category')->pluck('category');
@@ -26,16 +26,24 @@ class AchievementController extends Controller
             ->orderByDesc('year')
             ->pluck('year');
 
+        $statsRow = Achievement::query()
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("COUNT(CASE WHEN category = 'Nasional' THEN 1 END) as nasional")
+            ->selectRaw("COUNT(CASE WHEN category = 'Provinsi' THEN 1 END) as provinsi")
+            ->selectRaw("COUNT(CASE WHEN category = 'Kabupaten' THEN 1 END) as kabupaten")
+            ->first();
+
         $stats = [
-            'total'      => Achievement::count(),
-            'nasional'   => Achievement::where('category', 'Nasional')->count(),
-            'provinsi'   => Achievement::where('category', 'Provinsi')->count(),
-            'kabupaten'  => Achievement::where('category', 'Kabupaten')->count(),
+            'total' => (int) ($statsRow->total ?? 0),
+            'nasional' => (int) ($statsRow->nasional ?? 0),
+            'provinsi' => (int) ($statsRow->provinsi ?? 0),
+            'kabupaten' => (int) ($statsRow->kabupaten ?? 0),
         ];
 
         return view('public.kesiswaan.prestasi.index', compact('achievements', 'categories', 'years', 'stats'));
     }
-        public function show(Achievement $achievement): View
+
+    public function show(Achievement $achievement): View
     {
         $related = Achievement::query()
             ->where('id', '!=', $achievement->id)

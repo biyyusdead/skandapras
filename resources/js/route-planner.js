@@ -1,5 +1,6 @@
 // =============================================================
-// route-planner.js — A* grid-based (port dari findCampusRoute)
+// route-planner.js — CLEAN VERSION
+// A* + antar lantai via tangga + tab switcher + dropdown
 // =============================================================
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -20,10 +21,29 @@ document.addEventListener('DOMContentLoaded', function () {
     let dropdownsFilled = false;
 
     // ===========================================================
-    // GRID A* — dari findCampusRoute
+    // UTIL
+    // ===========================================================
+    function getFloorFromRoom(room) {
+        if (!room) return null;
+        const f = room.map_floor || room.floor;
+        return f != null && f !== '' ? String(f) : null;
+    }
+
+    function findNearestStair(roomEntry, stairs) {
+        if (!stairs.length) return null;
+        let best = null, bestDist = Infinity;
+        stairs.forEach(s => {
+            const d = Math.hypot(s.x - roomEntry.x, s.z - roomEntry.z);
+            if (d < bestDist) { bestDist = d; best = s; }
+        });
+        return best;
+    }
+
+    // ===========================================================
+    // GRID A*
     // ===========================================================
     function findRouteBetween(fromRoom, toRoom, api) {
-        const step = 0.25;
+        const step = 0.35;
         const minX = -37.5, maxX = 37.5, minZ = -20.5, maxZ = 20.5;
         const nx = Math.round((maxX - minX) / step) + 1;
         const nz = Math.round((maxZ - minZ) / step) + 1;
@@ -34,19 +54,18 @@ document.addEventListener('DOMContentLoaded', function () {
             iz: Math.max(0, Math.min(nz - 1, Math.round((z - minZ) / step)))
         });
 
-        // Start & end cell
         const start = toCell(fromRoom.x, fromRoom.z + fromRoom.D / 2 + 0.65);
         const target = toCell(toRoom.x, toRoom.z + toRoom.D / 2 + 0.65);
 
-        // Blocked grid
         const blocked = new Uint8Array(nx * nz);
         const registry = api.roomsRegistry || [];
+        const pad = 0.35;
+
         registry.forEach(o => {
             if (!(o.ht > 0)) return;
-            // Skip gedung start & end (biar bisa masuk)
             if (Math.abs(o.x - fromRoom.x) < 0.08 && Math.abs(o.z - fromRoom.z) < 0.08) return;
             if (Math.abs(o.x - toRoom.x) < 0.08 && Math.abs(o.z - toRoom.z) < 0.08) return;
-            const pad = 0.12;
+
             const x0 = Math.max(0, Math.floor((o.x - o.W / 2 - pad - minX) / step));
             const x1 = Math.min(nx - 1, Math.ceil((o.x + o.W / 2 + pad - minX) / step));
             const z0 = Math.max(0, Math.floor((o.z - o.D / 2 - pad - minZ) / step));
@@ -57,8 +76,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         });
-        blocked[index(start.ix, start.iz)] = 0;
-        blocked[index(target.ix, target.iz)] = 0;
+
+        const clearArea = (cx, cz, r = 3) => {
+            for (let dx = -r; dx <= r; dx++) {
+                for (let dz = -r; dz <= r; dz++) {
+                    const ix = cx + dx, iz = cz + dz;
+                    if (ix >= 0 && ix < nx && iz >= 0 && iz < nz) blocked[index(ix, iz)] = 0;
+                }
+            }
+        };
+        clearArea(start.ix, start.iz, 3);
+        clearArea(target.ix, target.iz, 3);
 
         const total = nx * nz;
         const gScore = new Float32Array(total).fill(Infinity);
@@ -72,7 +100,6 @@ document.addEventListener('DOMContentLoaded', function () {
             return Math.hypot(ix - target.ix, iz - target.iz);
         };
 
-        // Min-heap sederhana
         const heap = [];
         const push = (item) => {
             heap.push(item);
@@ -115,6 +142,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         let found = false;
         let iterations = 0;
+        let bestFallback = startId;
+        let bestH = heuristic(startId);
 
         while (heap.length && iterations++ < total * 3) {
             const cur = pop();
@@ -123,6 +152,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (closed[current]) continue;
             if (current === goalId) { found = true; break; }
             closed[current] = 1;
+
+            const h = heuristic(current);
+            if (h < bestH) { bestH = h; bestFallback = current; }
+
             const ix = current % nx, iz = Math.floor(current / nx);
 
             for (const [dx, dz, cost] of dirs) {
@@ -140,11 +173,9 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        if (!found) return null;
-
-        // Reconstruct
+        const finalId = found ? goalId : bestFallback;
         const path = [];
-        let id = goalId;
+        let id = finalId;
         while (id !== -1) {
             path.push(point(id % nx, Math.floor(id / nx)));
             if (id === startId) break;
@@ -152,13 +183,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         path.reverse();
 
-        // Simplify collinear
         const simple = [];
         for (let i = 0; i < path.length; i++) {
             if (i === 0 || i === path.length - 1) { simple.push(path[i]); continue; }
             const a = path[i - 1], b = path[i], c = path[i + 1];
             if (Math.abs((b.x - a.x) * (c.z - b.z) - (b.z - a.z) * (c.x - b.x)) > 0.001) simple.push(b);
         }
+
+        if (simple.length < 2) {
+            simple.push({ x: toRoom.x, z: toRoom.z + toRoom.D / 2 + 0.65 });
+        }
+
         return simple;
     }
 
@@ -209,111 +244,190 @@ document.addEventListener('DOMContentLoaded', function () {
     const retry = setInterval(() => { if (tryFill()) clearInterval(retry); }, 300);
     setTimeout(() => clearInterval(retry), 30000);
     window.addEventListener('3d-ready', () => tryFill());
-    document.querySelectorAll('.view-toggle-btn').forEach(btn => {
-        btn.addEventListener('click', () => setTimeout(tryFill, 200));
+    document.querySelectorAll('.view-toggle-btn').forEach(b => {
+        b.addEventListener('click', () => setTimeout(tryFill, 200));
     });
 
     // ===========================================================
-    // DRAW & CLEAR
+    // CLEAR
     // ===========================================================
     function clearRoute() {
         const api = window.__peta3D;
         if (!api) return;
+
         if (routeLine) {
             api.scene.remove(routeLine);
-            routeLine.geometry.dispose();
-            routeLine.material.dispose();
+            if (routeLine.geometry) routeLine.geometry.dispose();
+            if (routeLine.material) {
+                if (Array.isArray(routeLine.material)) routeLine.material.forEach(m => m.dispose());
+                else routeLine.material.dispose();
+            }
             routeLine = null;
         }
+
         routeMarkers.forEach(m => {
             api.scene.remove(m);
             if (m.geometry) m.geometry.dispose();
-            if (m.material) m.material.dispose();
+            if (m.material) {
+                if (Array.isArray(m.material)) m.material.forEach(mm => mm.dispose());
+                else m.material.dispose();
+            }
         });
         routeMarkers = [];
+
         if (api._routeAnim) {
             api._routeAnim.active = false;
             api._routeAnim.dots = [];
             api._routeAnim.curve = null;
         }
+        if (api._billboardArrows) api._billboardArrows = [];
+
         if (panel) panel.classList.add('hidden');
     }
 
-        function drawRoute(path) {
+    // ===========================================================
+    // STAIR LABEL SPRITE
+    // ===========================================================
+    function makeStairLabel(text, dir) {
+        const cv = document.createElement('canvas');
+        const dpr = 2;
+        cv.width = 512 * dpr;
+        cv.height = 200 * dpr;
+        const ctx = cv.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        const bgColor = dir === 'up' ? '#16a34a' : '#dc2626';
+        const cx = 256, cy = 100;
+        const boxW = 340, boxH = 140;
+        const r = 30;
+
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 24;
+        ctx.shadowOffsetY = 8;
+
+        const rx = cx - boxW / 2, ry = cy - boxH / 2;
+        ctx.fillStyle = bgColor;
+        ctx.beginPath();
+        ctx.moveTo(rx + r, ry);
+        ctx.lineTo(rx + boxW - r, ry);
+        ctx.quadraticCurveTo(rx + boxW, ry, rx + boxW, ry + r);
+        ctx.lineTo(rx + boxW, ry + boxH - r);
+        ctx.quadraticCurveTo(rx + boxW, ry + boxH, rx + boxW - r, ry + boxH);
+        ctx.lineTo(rx + r, ry + boxH);
+        ctx.quadraticCurveTo(rx, ry + boxH, rx, ry + boxH - r);
+        ctx.lineTo(rx, ry + r);
+        ctx.quadraticCurveTo(rx, ry, rx + r, ry);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.shadowColor = 'transparent';
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 64px system-ui, -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(dir === 'up' ? '↑' : '↓', cx - 90, cy + 4);
+
+        ctx.font = 'bold 60px system-ui, -apple-system, sans-serif';
+        ctx.fillText(text, cx + 40, cy + 4);
+
+        const tex = new THREE.CanvasTexture(cv);
+        tex.minFilter = THREE.LinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        tex.needsUpdate = true;
+
+        const mat = new THREE.SpriteMaterial({
+            map: tex,
+            transparent: true,
+            depthTest: false,
+            depthWrite: false,
+            sizeAttenuation: true,
+        });
+
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(4.5, 1.75, 1);
+        sprite.renderOrder = 1002;
+        return sprite;
+    }
+
+    // ===========================================================
+    // 3D ARROW
+    // ===========================================================
+    function make3DArrow(dir, color) {
+        const group = new THREE.Group();
+        const mat = new THREE.MeshBasicMaterial({ color, depthTest: false });
+        const sign = dir === 'up' ? 1 : -1;
+
+        const shaft = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.12, 0.12, 1.4, 12),
+            mat
+        );
+        shaft.renderOrder = 1002;
+        group.add(shaft);
+
+        const head = new THREE.Mesh(
+            new THREE.ConeGeometry(0.35, 0.7, 16),
+            mat
+        );
+        head.position.y = sign * 1.0;
+        if (dir === 'down') head.rotation.z = Math.PI;
+        head.renderOrder = 1002;
+        group.add(head);
+
+        group.userData.isBillboard = true;
+        return group;
+    }
+
+    // ===========================================================
+    // DRAW
+    // ===========================================================
+    function drawRoute(path, staircasePoint = null) {
         const api = window.__peta3D;
         if (!api || !path || path.length < 2) return;
 
-        // Konversi ke Vector3
-        const pts = path.map(p => new THREE.Vector3(p.x, 0.15, p.z));
+        clearRoute();
 
-        // Tambah titik end supaya sampai ke gedung
+        const pts = path.map(p => new THREE.Vector3(p.x, 0.15, p.z));
         const last = pts[pts.length - 1];
         pts.push(new THREE.Vector3(last.x, 0.15, last.z));
 
-        // ── Garis utama: TubeGeometry neon cyan ──
         const curve = new THREE.CatmullRomCurve3(pts);
-        const tubeGeo = new THREE.TubeGeometry(
-            curve,
-            Math.max(pts.length * 3, 40),
-            0.09,        // radius — tipis tapi keliatan
-            8,
-            false
-        );
+        const tubeGeo = new THREE.TubeGeometry(curve, Math.max(pts.length * 3, 40), 0.09, 8, false);
         const tubeMat = new THREE.MeshBasicMaterial({
-            color: 0x00e5ff,     // cyan neon
-            depthTest: false,    // selalu di depan
-            transparent: true,
-            opacity: 0.95,
+            color: 0x00e5ff, depthTest: false, transparent: true, opacity: 0.95,
         });
         routeLine = new THREE.Mesh(tubeGeo, tubeMat);
         routeLine.renderOrder = 999;
         api.scene.add(routeLine);
 
-        // ── Outline putih (glow) di bawahnya ──
         const glowMat = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            depthTest: false,
-            transparent: true,
-            opacity: 0.35,
+            color: 0xffffff, depthTest: false, transparent: true, opacity: 0.35,
         });
-        const glowGeo = new THREE.TubeGeometry(
-            curve,
-            Math.max(pts.length * 3, 40),
-            0.16,        // lebih tebal
-            8,
-            false
-        );
+        const glowGeo = new THREE.TubeGeometry(curve, Math.max(pts.length * 3, 40), 0.16, 8, false);
         const glowLine = new THREE.Mesh(glowGeo, glowMat);
         glowLine.renderOrder = 998;
         api.scene.add(glowLine);
         routeMarkers.push(glowLine);
 
-        // ── Animasi dash bergerak (bola-bola kecil sepanjang jalan) ──
         const dotGeo = new THREE.SphereGeometry(0.18, 8, 8);
-        const dotMat = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            depthTest: false,
-        });
+        const dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false });
         const dots = [];
-        const numDots = 6;
-        for (let i = 0; i < numDots; i++) {
+        for (let i = 0; i < 6; i++) {
             const dot = new THREE.Mesh(dotGeo, dotMat);
             dot.renderOrder = 1000;
-            dot.userData.t = i / numDots;  // progress 0..1
             api.scene.add(dot);
             dots.push(dot);
             routeMarkers.push(dot);
         }
 
-        // Simpan di api untuk animasi
-        if (!api._routeAnim) {
-            api._routeAnim = { dots: [], curve: null, active: false };
-        }
+        if (!api._routeAnim) api._routeAnim = { dots: [], curve: null, active: false };
         api._routeAnim.dots = dots;
         api._routeAnim.curve = curve;
         api._routeAnim.active = true;
 
-        // ── Marker start & end ──
         const startDot = new THREE.Mesh(
             new THREE.SphereGeometry(0.35, 16, 16),
             new THREE.MeshBasicMaterial({ color: 0x22c55e, depthTest: false })
@@ -324,7 +438,6 @@ document.addEventListener('DOMContentLoaded', function () {
         api.scene.add(startDot);
         routeMarkers.push(startDot);
 
-        // Ring di start
         const startRing = new THREE.Mesh(
             new THREE.RingGeometry(0.5, 0.65, 32),
             new THREE.MeshBasicMaterial({ color: 0x22c55e, side: THREE.DoubleSide, depthTest: false, transparent: true, opacity: 0.8 })
@@ -346,7 +459,6 @@ document.addEventListener('DOMContentLoaded', function () {
         api.scene.add(endDot);
         routeMarkers.push(endDot);
 
-        // Ring di end
         const endRing = new THREE.Mesh(
             new THREE.RingGeometry(0.55, 0.72, 32),
             new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide, depthTest: false, transparent: true, opacity: 0.8 })
@@ -358,17 +470,55 @@ document.addEventListener('DOMContentLoaded', function () {
         api.scene.add(endRing);
         routeMarkers.push(endRing);
 
-        // Kamera fokus ke tengah
+        // Marker khusus tangga
+        if (staircasePoint) {
+            const dir = staircasePoint.direction || 'up';
+
+            const stairMarker = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.55, 0.55, 0.12, 20),
+                new THREE.MeshBasicMaterial({ color: 0xfbbf24, depthTest: false, transparent: true, opacity: 0.95 })
+            );
+            stairMarker.position.set(staircasePoint.x, 0.5, staircasePoint.z);
+            stairMarker.renderOrder = 1001;
+            api.scene.add(stairMarker);
+            routeMarkers.push(stairMarker);
+
+            const sprite = makeStairLabel(dir === 'up' ? 'NAIK' : 'TURUN', dir);
+            sprite.position.set(staircasePoint.x, 4.2, staircasePoint.z);
+            api.scene.add(sprite);
+            routeMarkers.push(sprite);
+
+            const arrowColor = dir === 'up' ? 0x22c55e : 0xef4444;
+            const arrow = make3DArrow(dir, arrowColor);
+            arrow.position.set(staircasePoint.x, 2.8, staircasePoint.z);
+            api.scene.add(arrow);
+            routeMarkers.push(arrow);
+
+            if (!api._billboardArrows) api._billboardArrows = [];
+            api._billboardArrows.push(arrow);
+        }
+
         const mid = pts[Math.floor(pts.length / 2)];
         api.flyTo(mid.x, mid.z, 2, 45);
     }
 
-    function buildSteps(path, fromName, toName) {
+    // ===========================================================
+    // STEPS PANEL
+    // ===========================================================
+    function buildSteps(path, fromName, toName, viaStairs, fromFloor, toFloor) {
         let dist = 0;
         for (let i = 1; i < path.length; i++) {
             dist += Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z);
         }
         const meters = Math.round(dist * 2);
+
+        const floorInfo = (fromFloor && toFloor && fromFloor !== toFloor)
+            ? `<div class="flex items-center gap-2 text-amber-700 font-semibold">
+                   <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                   <span>Lewat:</span><span>Tangga (Lt. ${fromFloor} → Lt. ${toFloor})</span>
+               </div>`
+            : '';
+
         return `
             <div class="space-y-2 text-xs">
                 <div class="flex items-center gap-2 text-emerald-700 font-semibold">
@@ -376,6 +526,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <span>Dari:</span>
                     <span>${fromName}</span>
                 </div>
+                ${floorInfo}
                 <div class="flex items-center gap-2 text-red-700 font-semibold">
                     <span class="w-3 h-3 rounded-full bg-red-500"></span>
                     <span>Ke:</span>
@@ -393,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ===========================================================
-    // EVENT HANDLER
+    // EVENT HANDLER — CARI RUTE
     // ===========================================================
     btn.addEventListener('click', () => {
         const fromId = fromSel.value;
@@ -409,8 +560,53 @@ document.addEventListener('DOMContentLoaded', function () {
         const toEntry = list.find(o => o.room && String(o.room.id) === String(toId));
         if (!fromEntry || !toEntry) { alert('Ruangan tidak ditemukan di 3D.'); return; }
 
-        console.log('[Route] Mencari:', fromEntry.room.name, '→', toEntry.room.name);
+        const fromFloor = getFloorFromRoom(fromEntry.room);
+        const toFloor = getFloorFromRoom(toEntry.room);
+        const diffFloor = fromFloor && toFloor && fromFloor !== toFloor;
 
+        console.log(`[Route] ${fromEntry.room.name} (Lt.${fromFloor || '?'}) → ${toEntry.room.name} (Lt.${toFloor || '?'})`);
+
+        if (diffFloor) {
+            const stairs = api.stairsRegistry || [];
+            if (stairs.length === 0) {
+                alert(`Rute antar lantai (Lt. ${fromFloor} → Lt. ${toFloor}) membutuhkan data tangga.\n\nSilakan pilih ruangan di lantai yang sama.`);
+                return;
+            }
+
+            const stairsFrom = findNearestStair(fromEntry, stairs);
+            const stairsTo = findNearestStair(toEntry, stairs);
+            if (!stairsFrom || !stairsTo) { alert('Tangga terdekat tidak ditemukan.'); return; }
+
+            const t0 = performance.now();
+            const path1 = findRouteBetween(fromEntry, stairsFrom, api) || [];
+            const path2 = findRouteBetween(stairsFrom, toEntry, api) || [];
+            const t1 = performance.now();
+
+            let combined = [...path1];
+            if (stairsFrom !== stairsTo) {
+                const pathMid = findRouteBetween(stairsFrom, stairsTo, api) || [];
+                combined = combined.concat(pathMid);
+            }
+            combined = combined.concat(path2);
+
+            console.log(`[Route] Antar-lantai: ${combined.length} titik, ${(t1 - t0).toFixed(1)}ms`);
+            if (combined.length < 2) { alert('Rute antar lantai tidak ditemukan.'); return; }
+
+            const fromFloorNum = parseInt(fromFloor, 10) || 1;
+            const toFloorNum = parseInt(toFloor, 10) || 1;
+            const direction = toFloorNum > fromFloorNum ? 'up' : 'down';
+            const stairPointWithDir = { ...stairsFrom, direction };
+
+            drawRoute(combined, stairPointWithDir);
+
+            if (panel && steps) {
+                steps.innerHTML = buildSteps(combined, fromEntry.room.name, toEntry.room.name, true, fromFloor, toFloor);
+                panel.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Rute satu lantai
         const t0 = performance.now();
         const path = findRouteBetween(fromEntry, toEntry, api);
         const t1 = performance.now();
@@ -420,10 +616,131 @@ document.addEventListener('DOMContentLoaded', function () {
 
         drawRoute(path);
         if (panel && steps) {
-            steps.innerHTML = buildSteps(path, fromEntry.room.name, toEntry.room.name);
+            steps.innerHTML = buildSteps(path, fromEntry.room.name, toEntry.room.name, false, fromFloor, toFloor);
             panel.classList.remove('hidden');
         }
     });
 
     btnClear?.addEventListener('click', clearRoute);
+
+     // ===========================================================
+    // ROOMS LIST OVERLAY — daftar ruangan DI DALAM container 3D
+    // ===========================================================
+    const roomsToggleBtn = document.getElementById('rooms-list-toggle');
+    const roomsCloseBtn = document.getElementById('rooms-list-close');
+    const roomsPanel = document.getElementById('rooms-list-panel');
+    const roomsSearchInput = document.getElementById('rooms-list-search');
+    const roomsItemsContainer = document.getElementById('rooms-list-items');
+
+    function renderRoomsList(filter = '') {
+        if (!roomsItemsContainer) return;
+        const api = window.__peta3D;
+        if (!api) return;
+
+        const seen = new Set();
+        const rooms = [];
+        (api.roomsRegistry || []).forEach(o => {
+            if (!o.room || !o.room.id) return;
+            if (seen.has(o.room.id)) return;
+            seen.add(o.room.id);
+            rooms.push({ id: o.room.id, name: o.room.name });
+        });
+        rooms.sort((a, b) => a.name.localeCompare(b.name));
+
+        const q = filter.toLowerCase().trim();
+        const filtered = q ? rooms.filter(r => r.name.toLowerCase().includes(q)) : rooms;
+
+        if (filtered.length === 0) {
+            roomsItemsContainer.innerHTML = `<p class="text-[11px] text-surface-400 text-center py-4">Tidak ada ruangan.</p>`;
+            return;
+        }
+
+        roomsItemsContainer.innerHTML = filtered.map(r => `
+            <button type="button"
+                    class="room-list-item w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-surface-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                    data-room-id="${r.id}">
+                ${r.name}
+            </button>
+        `).join('');
+
+        roomsItemsContainer.querySelectorAll('.room-list-item').forEach(btnItem => {
+            btnItem.addEventListener('click', () => {
+                const roomId = btnItem.dataset.roomId;
+                const api2 = window.__peta3D;
+                if (!api2) return;
+                const entry = api2.roomsRegistry.find(o => o.room && String(o.room.id) === String(roomId));
+                if (!entry) return;
+
+                // Fokus kamera
+                api2.flyTo(entry.x, entry.z, 2, 28);
+
+                // Auto-set di dropdown rute
+                if (fromSel && !fromSel.value) fromSel.value = roomId;
+                else if (toSel) toSel.value = roomId;
+
+                // Buka modal
+                setTimeout(() => {
+                    if (entry.room) {
+                        window.openRoomModal({
+                            id: entry.room.id,
+                            name: entry.room.name,
+                            code: entry.room.code,
+                            condition: typeof entry.room.condition === 'object' ? entry.room.condition.value : entry.room.condition,
+                            conditionLabel: entry.room.conditionLabel || (typeof entry.room.condition === 'object' ? entry.room.condition.label : 'Tersedia'),
+                            location: entry.room.description || '',
+                            capacity: entry.room.capacity,
+                            health: entry.room.health_score,
+                            url: entry.room.detail_url || '#',
+                            reportUrl: entry.room.report_url || '#',
+                            photo: entry.room.photo_url || '',
+                        });
+                    }
+                }, 400);
+            });
+        });
+    }
+
+    if (roomsToggleBtn && roomsPanel) {
+        roomsToggleBtn.addEventListener('click', () => {
+            if (roomsPanel.classList.contains('hidden')) {
+                roomsPanel.classList.remove('hidden');
+                renderRoomsList('');
+            } else {
+                roomsPanel.classList.add('hidden');
+            }
+        });
+    }
+
+    if (roomsCloseBtn) {
+        roomsCloseBtn.addEventListener('click', () => roomsPanel?.classList.add('hidden'));
+    }
+
+    if (roomsSearchInput) {
+        roomsSearchInput.addEventListener('input', (e) => renderRoomsList(e.target.value));
+    }
+
+    // ===========================================================
+    // TOGGLE LABEL
+    // ===========================================================
+    const toggleLabelsBtn = document.getElementById('btn-toggle-labels');
+    if (toggleLabelsBtn) {
+        let labelsOn = true;
+        toggleLabelsBtn.addEventListener('click', () => {
+            labelsOn = !labelsOn;
+            if (typeof window.toggleTooltips === 'function') window.toggleTooltips(labelsOn);
+            toggleLabelsBtn.innerHTML = labelsOn
+                ? '<i data-lucide="tag" class="w-3.5 h-3.5"></i> Sembunyikan Label'
+                : '<i data-lucide="tag-off" class="w-3.5 h-3.5"></i> Tampilkan Label';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+    }
+
+    // ===========================================================
+    // TOOLTIP COUNT
+    // ===========================================================
+    window.addEventListener('3d-ready', (e) => {
+        const count = e.detail?.count || 0;
+        const el = document.getElementById('tooltip-count');
+        if (el) el.textContent = count;
+    });
 });

@@ -1,7 +1,7 @@
 /* ============================================================
    PUBLIC LAYOUT — Custom Scripts
    ============================================================ */
-
+import Alpine from 'alpinejs';
 // ============================================================
 // Skeleton instant — fix bfcache + nav loading
 // ============================================================
@@ -29,20 +29,37 @@
         finish();
     }
 
-    window.addEventListener('pageshow', () => {
-        const skeleton = document.getElementById('page-skeleton');
-        const content  = document.getElementById('page-content');
-        const oldSpinner = document.getElementById('nav-spinner');
+    window.addEventListener('pageshow', (event) => {
+        const isBackForward = event.persisted ||
+            (window.performance &&
+             window.performance.navigation &&
+             window.performance.navigation.type === 2);
+        const isStuck = document.documentElement.classList.contains('nav-loading') ||
+                        (document.getElementById('page-skeleton') &&
+                         !document.getElementById('page-skeleton').classList.contains('hidden'));
 
-        if (skeleton && !skeleton.classList.contains('hidden')) {
-            if (!document.documentElement.classList.contains('nav-loading')) {
-                skeleton.classList.add('hidden');
-                if (content) content.classList.remove('hidden');
+        if (isBackForward || isStuck) {
+            const content  = document.getElementById('page-content');
+            const skeleton = document.getElementById('page-skeleton');
+            if (content) content.classList.remove('hidden');
+            if (skeleton) skeleton.classList.add('hidden');
+
+            document.documentElement.classList.remove('nav-loading');
+
+            const oldSpinner = document.getElementById('nav-spinner');
+            if (oldSpinner && oldSpinner.parentNode) {
+                oldSpinner.parentNode.removeChild(oldSpinner);
             }
-        }
 
-        if (oldSpinner && oldSpinner.parentNode) {
-            oldSpinner.parentNode.removeChild(oldSpinner);
+            if (typeof LoadingState !== 'undefined' && LoadingState.cancel) {
+                LoadingState.cancel('nav');
+            }
+
+            sessionStorage.removeItem('skandapras_nav');
+
+            if (typeof window.refreshLucide === 'function') {
+                setTimeout(() => window.refreshLucide(), 100);
+            }
         }
     });
 })();
@@ -135,3 +152,175 @@ window.addEventListener('scroll', () => {
     });
 })();
 
+// ============================================================
+// Scroll Reveal Observer (Shared)
+// ============================================================
+(function () {
+    const initScrollReveal = () => {
+        const elements = document.querySelectorAll('.scroll-reveal:not(.show)');
+        if (!elements.length) return;
+
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            elements.forEach(el => el.classList.add('show'));
+            return;
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('show');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        elements.forEach(el => observer.observe(el));
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initScrollReveal);
+    } else {
+        initScrollReveal();
+    }
+})();
+
+// ============================================================
+// Preloader logic
+// ============================================================
+(function () {
+    const el = document.getElementById('skandapras-preloader');
+    if (!el) return;
+
+    if (sessionStorage.getItem('skandapras_preloader_shown') === '1' ||
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        el.classList.add('is-hidden');
+        return;
+    }
+
+    let closed = false;
+    function dismissPreloader() {
+        if (closed) return;
+        closed = true;
+        el.classList.add('is-opening');
+        setTimeout(function () {
+            el.classList.add('is-hidden');
+            sessionStorage.setItem('skandapras_preloader_shown', '1');
+        }, 300);
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(dismissPreloader, 150);
+    } else {
+        window.addEventListener('DOMContentLoaded', function () {
+            setTimeout(dismissPreloader, 200);
+        }, { once: true });
+    }
+
+    setTimeout(dismissPreloader, 1000);
+})();
+
+// ============================================================
+// Chatbot component
+// ============================================================
+export function registerChatbot() {
+    Alpine.data('chatbot', () => {
+        const greeting = {
+            role: 'bot',
+            title: 'Halo!',
+            text: 'Ada yang bisa saya bantu tentang SMK Negeri 2 Karanganyar?',
+        };
+
+        return {
+            isOpen: false,
+            typing: false,
+            draft: '',
+            suggestions: ['Berita terbaru?', 'Jurusan?', 'Sarpras?'],
+            messages: [greeting],
+
+        toggle() {
+            this.isOpen = !this.isOpen;
+            if (this.isOpen) {
+                this.$nextTick(() => {
+                    this.scrollDown();
+                    this.$refs.input && this.$refs.input.focus();
+                });
+            }
+        },
+
+        scrollDown() {
+            this.$nextTick(() => {
+                const el = this.$refs.scroller;
+                if (el) el.scrollTop = el.scrollHeight;
+            });
+        },
+
+        clearChat() {
+            this.messages = [greeting];
+            this.typing = false;
+            this.draft = '';
+        },
+
+        async send(text) {
+            const msg = (text || this.draft).trim();
+            if (!msg || this.typing) return;
+
+            const history = this.buildHistory();
+
+            this.messages.push({ role: 'user', text: msg });
+            this.draft = '';
+            this.typing = true;
+            this.scrollDown();
+
+            const result = await this.getReply(msg, history);
+
+            this.typing = false;
+            this.messages.push({ role: 'bot', text: result.text, error: result.error });
+            this.scrollDown();
+        },
+
+        buildHistory() {
+            return this.messages
+                .slice(1)
+                .filter(m => !m.error)
+                .slice(-20)
+                .map(m => ({
+                    role: m.role === 'user' ? 'user' : 'assistant',
+                    text: m.text,
+                }));
+        },
+
+        async getReply(msg, history = []) {
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                    || document.querySelector('input[name="_token"]')?.value || '';
+                const chatUrl = this.$el?.dataset?.chatUrl || '/chatbot/chat';
+
+                const response = await fetch(chatUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({ message: msg, history }),
+                });
+
+                if (response.status === 429) {
+                    return { text: 'Terlalu banyak pertanyaan. Coba lagi sebentar ya.', error: true };
+                }
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    return { text: data.message || 'Maaf, terjadi kesalahan.', error: true };
+                }
+
+                return { text: data.reply || 'Maaf, saya belum mendapatkan jawaban.', error: !data.reply };
+            } catch (error) {
+                console.error(error);
+                return { text: 'Maaf, terjadi masalah saat menghubungi server.', error: true };
+            }
+        },
+    };
+    });
+}

@@ -3,15 +3,13 @@
     'title' => 'AI Assistant',
 ])
 
-<style>
-    [x-cloak] {
-        display: none !important
-    }
-</style>
-
-<div x-data="chatbot()" x-cloak @keydown.escape.window="isOpen = false" @click.outside="isOpen = false"
-    class="fixed bottom-5 right-5 z-[60] flex flex-col items-end gap-4 sm:bottom-6 sm:right-6"
-    style="font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;">
+<div x-data="chatbot()" x-cloak 
+     data-chat-url="{{ route('public.chatbot.chat') }}"
+     @keydown.escape.window="isOpen = false" 
+     @click.outside="isOpen = false"
+     @open-chatbot.window="if (!isOpen) toggle()"
+     @close-chatbot.window="if (isOpen) toggle()"
+     class="fixed bottom-5 right-5 z-[60] flex flex-col items-end gap-4 sm:bottom-6 sm:right-6">
 
     <!-- =========================
          PANEL CHAT
@@ -21,7 +19,7 @@
         x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-150"
         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
         x-transition:leave-end="opacity-0 translate-y-4 scale-95" role="dialog" aria-label="{{ $title }}"
-        class="flex h-[560px] max-h-[calc(100vh-7.5rem)] w-[380px] max-w-[calc(100vw-2.5rem)] origin-bottom-right flex-col overflow-hidden rounded-[2rem] bg-[#5330AE] shadow-[0_20px_60px_rgba(40,20,100,0.4)] ring-1 ring-black/5">
+        class="flex h-[560px] max-h-[calc(100vh-7.5rem)] w-[380px] max-w-[calc(100vw-2.5rem)] origin-bottom-right flex-col overflow-hidden rounded-[2rem] bg-[#5330AE] shadow-[0_20px_60px_rgba(40,20,100,0.4)] ring-1 ring-black/5 max-lg:max-h-[calc(100vh-9rem)] max-lg:mb-20">
 
         <!-- HEADER -->
         <header
@@ -120,7 +118,7 @@
                         aria-label="Tanyakan sesuatu tentang sekolah" autocomplete="off"
                         class="h-[46px] w-full rounded-2xl border border-[#C9BDEA] bg-[#F3F0FB] px-4 text-left text-[13px] text-black outline-none transition focus:border-[#6C40D6] focus:ring-2 focus:ring-violet-200">
 
-                    <!-- Placeholder rata tengah (sesuai desain), hilang saat mulai mengetik -->
+                    <!-- Placeholder rata tengah -->
                     <span x-show="!draft" aria-hidden="true"
                         class="pointer-events-none absolute inset-0 flex items-center justify-center px-4 text-[13px] text-black">
                         Tanyakan sesuatu tentang sekolah...
@@ -141,11 +139,11 @@
 
     <!-- =========================
          TRIGGER (ikon chatbot)
-         Tertutup  : ikon robot
-         Terbuka   : tombol X
+         Hidden di mobile — sudah ada di bottom nav
     ========================== -->
     <button type="button" @click="toggle()" :aria-expanded="isOpen" aria-label="Buka asisten AI"
-        class="relative h-16 w-16 shrink-0 transition-transform duration-200 hover:-translate-y-0.5 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 rounded-2xl">
+        class="relative h-16 w-16 shrink-0 transition-transform duration-200 hover:-translate-y-0.5 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 rounded-2xl
+               hidden lg:block">
 
         <!-- Ikon robot -->
         <span x-show="!isOpen" x-transition:enter="transition ease-out duration-200"
@@ -172,115 +170,3 @@
         </span>
     </button>
 </div>
-
-
-{{-- Alpine.js hanya dimuat jika halaman belum punya (menghindari ganda) --}}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        if (!window.Alpine) {
-            var s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js';
-            s.defer = true;
-            document.head.appendChild(s);
-        }
-    });
-
-    function chatbot() {
-        const greeting = {
-            role: 'bot',
-            title: 'Halo!',
-            text: 'Ada yang bisa saya bantu tentang SMK Negeri 2 Karanganyar?',
-        };
-
-        return {
-            isOpen: false,
-            typing: false,
-            draft: '',
-            suggestions: ['Berita terbaru?', 'Jurusan?', 'Sarpras?'],
-            messages: [greeting],
-
-            toggle() {
-                this.isOpen = !this.isOpen;
-                if (this.isOpen) {
-                    this.$nextTick(() => {
-                        this.scrollDown();
-                        this.$refs.input && this.$refs.input.focus();
-                    });
-                }
-            },
-
-            scrollDown() {
-                this.$nextTick(() => {
-                    const el = this.$refs.scroller;
-                    if (el) el.scrollTop = el.scrollHeight;
-                });
-            },
-
-            clearChat() {
-                this.messages = [greeting];
-                this.typing = false;
-                this.draft = '';
-            },
-
-async send(text) {
-    const msg = (text || this.draft).trim();
-    if (!msg || this.typing) return;
-
-    // ambil riwayat SEBELUM pesan baru ditambahkan
-    const history = this.buildHistory();
-
-    this.messages.push({ role: 'user', text: msg });
-    this.draft = '';
-    this.typing = true;
-    this.scrollDown();
-
-    const result = await this.getReply(msg, history);
-
-    this.typing = false;
-    this.messages.push({ role: 'bot', text: result.text, error: result.error });
-    this.scrollDown();
-},
-
-// Ubah format pesan Alpine -> format yang diminta backend
-buildHistory() {
-    return this.messages
-        .slice(1)                    // buang sapaan awal (bot), Gemini harus mulai dari 'user'
-        .filter(m => !m.error)       // jangan kirim pesan error
-        .slice(-20)                  // batasi panjang
-        .map(m => ({
-            role: m.role === 'user' ? 'user' : 'assistant',
-            text: m.text,
-        }));
-},
-
-async getReply(msg, history = []) {
-    try {
-        const response = await fetch('{{ route('public.chatbot.chat') }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            },
-            body: JSON.stringify({ message: msg, history }),
-        });
-
-        if (response.status === 429) {
-            return { text: 'Terlalu banyak pertanyaan. Coba lagi sebentar ya.', error: true };
-        }
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return { text: data.message || 'Maaf, terjadi kesalahan.', error: true };
-        }
-
-        return { text: data.reply || 'Maaf, saya belum mendapatkan jawaban.', error: !data.reply };
-    } catch (error) {
-        console.error(error);
-        return { text: 'Maaf, terjadi masalah saat menghubungi server.', error: true };
-    }
-},
-        };
-    }
-</script>

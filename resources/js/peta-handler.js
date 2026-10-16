@@ -1,6 +1,5 @@
 // =============================================================
-// peta-handler.js — Port lengkap "Denah_Sekolah_3D_revisi13"
-// + match DB + label hilang + modal DB + stairs + gate + flag
+// peta-handler.js — Port lengkap + tooltip scale by distance
 // =============================================================
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -92,6 +91,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (viewMap) viewMap.classList.toggle('hidden', view !== 'map');
             if (view3D) view3D.classList.toggle('hidden', view !== '3d');
             if (viewList) viewList.classList.toggle('hidden', view !== 'list');
+
+            const searchFilterBar = document.getElementById('search-filter-bar');
+            if (searchFilterBar) {
+                searchFilterBar.classList.toggle('hidden', view === '3d');
+            }
+
             if (view === '3d') {
                 await ensure3DScene();
                 requestAnimationFrame(() => window.trigger3DResize?.());
@@ -185,7 +190,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
         set('room-modal-title', data.name || '—');
         set('room-modal-code', data.code || 'RUANG');
-        set('room-modal-floor', data.floor ? 'Lt. ' + data.floor : '—');
         set('room-modal-capacity', data.capacity ? data.capacity + ' org' : '—');
         set('room-modal-health', data.health ? data.health + '/100' : '—');
 
@@ -284,63 +288,40 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const isLowEnd = (navigator.hardwareConcurrency || 4) <= 4 || window.devicePixelRatio <= 1;
 
-        // --- Konstanta ---
         const S = 0.05, CX = 785, CY = 450;
 
-        // --- DB MAPPING ---
         const DB_MAPPING = {
-            'Lab CAM & CNC': 16,
-            'L. PPLG': 6,
-            'Aula RPL': 6,          // fallback ke Lab RPL 1
-            'B. Otomotif': 28,
-            'B. Tekstil': 27,
-            'B. Mesin': 15,
-            'Masjid Al-Amanah': 26,
-            'Kantin': 5,
-            'Gudang': 8,
-            'R. Perpust': 9,
-            'R. Multimedia': 2,
-            'R KS': 12,
-            'R. Guru': 11,
-            'R. TU': 34,
-            'R. Kesiswaan': 35,
-            'R. Humas': 36,
-            'Basecamp Organisasi': 21,
-            'L. CAD CAM': 16,
-            'BK': 32,
-            'R Sarpra': 36,
-            'R UKS': 40,
-            'M. Al-Amanah': 26,
-            'Server': 30,
-            'Kopsis': 31,
-            'R. Olah Sampah': 17,
-            'R. Kesenian': 7,
-            'Studio Musik': 20,
+            'Lab CAM & CNC': 16, 'L. PPLG': 6, 'Aula RPL': 10,
+            'B. Otomotif': 28, 'B. Tekstil': 27, 'B. Mesin': 15,
+            'Masjid Al-Amanah': 26, 'Kantin': 5, 'Gudang': 8,
+            'R. Perpust': 9, 'R. Multimedia': 2, 'R KS': 12,
+            'R. Guru': 11, 'R. TU': 34, 'R. Kesiswaan': 35,
+            'Basecamp Organisasi': 21, 'L. CAD CAM': 16,
+            'BK': 32, 'R Sarpra': 36, 'R UKS': 40, 'M. Al-Amanah': 26, 
+            'Kopsis': 31, 'R. Olah Sampah': 17,
+            'R. Kesenian': 7, 'Studio Musik': 20,
             'R 30': 73, 'R 29': 72, 'R 28': 71, 'R 27': 70, 'R 26': 69,
             'R 25': 68, 'R 24': 67, 'R 23': 66, 'R 22': 65, 'R 21': 64,
             'R 20': 63, 'R 19': 62, 'R 18': 61, 'R 17': 60, 'R 16': 59,
             'R 15': 58, 'R 14': 57, 'R 13': 56, 'R 12': 55,
             'R 11': 54, 'R 10': 53, 'R 9': 52, 'R 8': 51, 'R 7': 50,
             'R 6': 49, 'R 5': 48, 'R 4': 47, 'R 3': 46, 'R 2': 3,
-            'R 1': 18, 'R KI': 19,
+            'R KI': 19,
             'R 31': 74, 'R 32': 75, 'R 33': 76, 'R 34': 77, 'R 35': 78, 'R 36': 79,
             'R. Waka': 30,
         };
 
         const AREA_MAPPING = {
             'Lap. Upacara': 41,
-            'Lap. Basket & Voli': 37,
-            'Lap. Utama (Sepak Bola & Atletik)': 42,
             'Lap. Basket': 37,
             'Lap. Voli': 38,
+            'Lap. Utama (Sepak Bola & Atletik)': 42,
         };
 
-        // --- Room data ---
         const roomById = new Map();
         const roomsAll = Array.isArray(window.serverRoomsData) ? window.serverRoomsData : [];
         roomsAll.forEach(r => roomById.set(r.id, r));
 
-        // --- Scene ---
         const scene = new THREE.Scene();
         const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
@@ -389,7 +370,6 @@ document.addEventListener('DOMContentLoaded', function () {
         fillLight.position.set(35, 45, -35);
         scene.add(fillLight);
 
-        // Ground
         const ground = new THREE.Mesh(
             new THREE.PlaneGeometry(130, 90),
             new THREE.MeshLambertMaterial({ color: dark ? 0x315b2b : 0x4f9f36 })
@@ -407,8 +387,87 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const LM = c => new THREE.MeshLambertMaterial({ color: c });
 
-        // Label: no-op
-        function label() { return new THREE.Object3D(); }
+        // ============================================================
+        // TOOLTIP SYSTEM
+        // ============================================================
+        const labelSprites = [];
+
+        function makeTooltipSprite(text, color = '#16a34a') {
+            const cv = document.createElement('canvas');
+            const ctx = cv.getContext('2d');
+
+            const dpr = 2;
+            const padX = 32;
+            cv.width = 512 * dpr;
+            cv.height = 160 * dpr;
+            ctx.scale(dpr, dpr);
+
+            ctx.font = 'bold 40px system-ui, -apple-system, sans-serif';
+            const textW = Math.min(ctx.measureText(text).width, 440);
+            const boxW = textW + padX * 2;
+            const boxH = 80;
+            const cx = 256, cy = 80;
+
+            ctx.shadowColor = 'rgba(0,0,0,0.35)';
+            ctx.shadowBlur = 20;
+            ctx.shadowOffsetY = 6;
+
+            const rx = cx - boxW / 2, ry = cy - boxH / 2;
+            const r = 22;
+            ctx.fillStyle = 'rgba(255,255,255,0.97)';
+            ctx.beginPath();
+            ctx.moveTo(rx + r, ry);
+            ctx.lineTo(rx + boxW - r, ry);
+            ctx.quadraticCurveTo(rx + boxW, ry, rx + boxW, ry + r);
+            ctx.lineTo(rx + boxW, ry + boxH - r);
+            ctx.quadraticCurveTo(rx + boxW, ry + boxH, rx + boxW - r, ry + boxH);
+            ctx.lineTo(rx + r, ry + boxH);
+            ctx.quadraticCurveTo(rx, ry + boxH, rx, ry + boxH - r);
+            ctx.lineTo(rx, ry + r);
+            ctx.quadraticCurveTo(rx, ry, rx + r, ry);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.shadowColor = 'transparent';
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 40px system-ui, -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, cx, cy + 2, 440);
+
+            const tex = new THREE.CanvasTexture(cv);
+            tex.minFilter = THREE.LinearFilter;
+            tex.magFilter = THREE.LinearFilter;
+            tex.anisotropy = 4;
+            tex.needsUpdate = true;
+
+            const mat = new THREE.SpriteMaterial({
+                map: tex,
+                transparent: true,
+                depthTest: false,
+                depthWrite: false,
+                sizeAttenuation: true,
+            });
+            const sprite = new THREE.Sprite(mat);
+            sprite.renderOrder = 9999;
+            return sprite;
+        }
+
+        function addTooltip(name, worldX, worldY, worldZ, color) {
+            const sprite = makeTooltipSprite(name, color);
+            // Base scale: gedung biasa
+            const baseScale = { x: 6.5, y: 2.0 };
+            sprite.scale.set(baseScale.x, baseScale.y, 1);
+            sprite.position.set(worldX, worldY, worldZ);
+            sprite.userData = { baseScale, name };
+            scene.add(sprite);
+            labelSprites.push(sprite);
+            return sprite;
+        }
 
         // Wall texture cache
         const wtCache = new Map();
@@ -523,19 +582,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const pk = [];
         const roomsRegistry = [];
+        const stairsRegistry = [];
 
         function resolveRoom(name) {
-            const dbId = DB_MAPPING[name];
+            const dbId = DB_MAPPING[name] ?? AREA_MAPPING[name];
             if (dbId == null) return null;
             return roomById.get(dbId) || null;
         }
         function isDecorative(name) {
-            return DB_MAPPING[name] == null;
+            return (DB_MAPPING[name] ?? AREA_MAPPING[name]) == null;
         }
 
-        // =====================================================
-        // STAIRS
-        // =====================================================
+        function conditionColor(room) {
+            if (!room) return '#94a3b8';
+            const cond = typeof room.condition === 'object' ? room.condition.value : room.condition;
+            return cond === 'baik' ? '#16a34a' : cond === 'rusak_ringan' ? '#f59e0b' : cond === 'rusak_berat' ? '#ef4444' : '#94a3b8';
+        }
+
         function StairForRow(x, y, w, h, side = 'left') {
             const W = w * S * 0.93 - 0.025, D = h * S * 0.965 - 0.025;
             const baseUpper = 2.14, steps = 8, stepRise = baseUpper / steps;
@@ -555,6 +618,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 rail.position.set(stairX + s * (stairW / 2 + 0.04), baseUpper / 2, D / 2 + steps * stepRun / 2);
                 g.add(rail);
             });
+            stairsRegistry.push({ x: g.position.x, z: g.position.z, name: `Tangga`, connectsFloor: [1, 2] });
             scene.add(g);
         }
 
@@ -575,12 +639,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 rail.position.set(s * (stairW / 2 + 0.04), baseUpper / 2, D / 2 + steps * stepRun / 2);
                 g.add(rail);
             });
+            stairsRegistry.push({ x: g.position.x, z: g.position.z, name: 'Tangga', connectsFloor: [1, 2] });
             scene.add(g);
         }
 
-        // =====================================================
-        // BUILDING GENERATOR
-        // =====================================================
         function B(t, x, y, w, h, k, ht) {
             const dbId = DB_MAPPING[t];
             const deco = (dbId == null);
@@ -623,6 +685,8 @@ document.addEventListener('DOMContentLoaded', function () {
             sl.castShadow = !isLowEnd;
             g.add(sl);
 
+            let tooltipY = ht + 1.4;
+
             if (k === 'c' || (k === 'o' && W > 5)) {
                 const gg = new THREE.CylinderGeometry(1, 1, 1, 3);
                 gg.rotateZ(Math.PI / 2); gg.rotateX(-Math.PI / 2);
@@ -631,6 +695,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 r.position.y = ht + 0.65;
                 r.castShadow = !isLowEnd;
                 g.add(r);
+                tooltipY = ht + 1.7;
             } else if (k === 'm') {
                 const drum = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.3, 0.6, 16), LM(0xfdfbf7));
                 drum.position.y = ht + 0.3; drum.castShadow = !isLowEnd; g.add(drum);
@@ -651,11 +716,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     const sp = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), LM(0xf59e0b));
                     sp.position.set(mn.position.x, 7.65, mn.position.z); g.add(sp);
                 });
+                tooltipY = ht + 4.5;
             } else {
                 const rh = Math.min(0.85, Math.min(W, D) * 0.28);
                 const pr = makePitchedRoof(W, D, rh, roofClay);
                 pr.position.y = ht + 0.12;
                 g.add(pr);
+                tooltipY = ht + 1.1;
             }
 
             if (W < 18 && k !== 'm') {
@@ -672,6 +739,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const roomData = {
                 name: t, x: g.position.x, z: g.position.z, W, D, ht,
                 room, isDecorative: deco, dbId: dbId ?? null,
+                tooltipY,
             };
             m.userData.room = roomData;
             pk.push(m);
@@ -680,12 +748,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 pk.push(upperFloorMesh);
             }
             roomsRegistry.push(roomData);
+
+            const tipColor = deco ? '#94a3b8' : conditionColor(room);
+            const tooltipSprite = addTooltip(t, g.position.x, tooltipY, g.position.z, tipColor);
+            tooltipSprite.userData.roomRef = roomData;
+
             scene.add(g);
         }
 
-        // =====================================================
-        // STACKED CLASSROOM PAIR
-        // =====================================================
         function BStackedClassroomPair(lowerName, upperName, x, y, w, h, lowerK = 'y', upperK = 'b') {
             const W = w * S * 0.93 - 0.025, D = h * S * 0.965 - 0.025;
             const lowerH = 2, slabH = 0.14, upperH = 2, baseUpper = lowerH + slabH;
@@ -760,11 +830,17 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             scene.add(g);
+
+            if (lowerName && lowerName.trim() !== '') {
+                const tipL = addTooltip(lowerName, g.position.x, lowerH + 0.8, g.position.z, isDecorative(lowerName) ? '#94a3b8' : conditionColor(lowerRoom.room));
+                tipL.userData.roomRef = lowerRoom;
+            }
+            if (upperName && upperName.trim() !== '') {
+                const tipU = addTooltip(upperName, g.position.x, baseUpper + upperH + 1.0, g.position.z, isDecorative(upperName) ? '#94a3b8' : conditionColor(upperRoom.room));
+                tipU.userData.roomRef = upperRoom;
+            }
         }
 
-        // =====================================================
-        // UPPER WING TWO ROOMS
-        // =====================================================
         function BUpperWingTwoRooms(nameA, nameB, x, y, w, h, k = 'b') {
             const W = w * S * 0.93 - 0.025, D = h * S * 0.965 - 0.025;
             const slabH = 0.14, baseUpper = 2.14, upperH = 2, halfW = W / 2;
@@ -799,9 +875,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 mesh.userData.room = room;
                 pk.push(mesh);
                 roomsRegistry.push(room);
+                return room;
             };
-            makeUpper(nameA, -halfW / 2);
-            makeUpper(nameB, halfW / 2);
+            const rA = makeUpper(nameA, -halfW / 2);
+            const rB = makeUpper(nameB, halfW / 2);
 
             const fascia = new THREE.Mesh(new THREE.BoxGeometry(W + 0.32, 0.16, D + 0.32), LM(0x70443a));
             fascia.position.y = baseUpper + upperH + 0.08;
@@ -810,11 +887,14 @@ document.addEventListener('DOMContentLoaded', function () {
             roof.position.y = baseUpper + upperH + 0.12;
             g.add(roof);
             scene.add(g);
+
+            const tipY = baseUpper + upperH + 1.0;
+            const tipA = addTooltip(nameA, g.position.x - halfW / 2, tipY, g.position.z, isDecorative(nameA) ? '#94a3b8' : conditionColor(rA.room));
+            tipA.userData.roomRef = rA;
+            const tipB = addTooltip(nameB, g.position.x + halfW / 2, tipY, g.position.z, isDecorative(nameB) ? '#94a3b8' : conditionColor(rB.room));
+            tipB.userData.roomRef = rB;
         }
 
-        // =====================================================
-        // AREA
-        // =====================================================
         function P(t, x, y, w, h, col) {
             const W = w * S, D = h * S;
             let groundCol = col;
@@ -934,42 +1014,28 @@ document.addEventListener('DOMContentLoaded', function () {
                     const cBar = new THREE.Mesh(new THREE.BoxGeometry(2.88, 0.08, 0.08), LM(0xf8fafc));
                     cBar.position.set(0, 1.4, 0);
                     postG.add(cBar);
-                    const net = new THREE.Mesh(
-                        new THREE.BoxGeometry(2.8, 1.3, 0.6),
-                        new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.4 })
-                    );
-                    net.position.set(0, 0.65, -dir * 0.3);
-                    postG.add(net);
                     scene.add(postG);
                 });
-
-                [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([dx, dz]) => {
-                    const flX = m.position.x + dx * (pW / 2 - 0.3), flZ = m.position.z + dz * (pD / 2 - 0.3);
-                    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.85, 6), LM(0xffffff));
-                    pole.position.set(flX, 0.42, flZ);
-                    scene.add(pole);
-                    const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.14), new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide }));
-                    flag.position.set(flX + 0.1, 0.75, flZ);
-                    scene.add(flag);
-                });
-
-                const tbX = m.position.x + W / 2 - 0.5;
-                const tb1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.3, D - 3), LM(0x94a3b8));
-                tb1.position.set(tbX, 0.15, m.position.z);
-                scene.add(tb1);
-                const tb2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, D - 4), LM(0x64748b));
-                tb2.position.set(tbX + 0.35, 0.3, m.position.z);
-                scene.add(tb2);
             }
 
             const room = resolveRoom(t);
             const deco = isDecorative(t);
-            m.userData.room = {
+            const roomData = {
                 name: t, x: m.position.x, z: m.position.z, W, D, ht: 0,
                 room, isDecorative: deco,
             };
+            m.userData.room = roomData;
             pk.push(m);
-            roomsRegistry.push(m.userData.room);
+            roomsRegistry.push(roomData);
+
+            if (t && t.trim() !== '') {
+                const tipColor = deco ? '#94a3b8' : conditionColor(room);
+                const tipY = 1.8;
+                const tooltipSprite = addTooltip(t, m.position.x, tipY, m.position.z, tipColor);
+                tooltipSprite.userData.roomRef = roomData;
+                tooltipSprite.userData.baseScale = { x: 7.5, y: 2.3 };
+                tooltipSprite.scale.set(7.5, 2.3, 1);
+            }
         }
 
         function F(x, y, w, h) {
@@ -1002,45 +1068,9 @@ document.addEventListener('DOMContentLoaded', function () {
             scene.add(g);
         }
 
-        function createSchoolBus(px, pz) {
-            const g = new THREE.Group();
-            g.position.set(px, 0, pz);
-            const b = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.75, 0.95), LM(0xf59e0b));
-            b.position.y = 0.45; b.castShadow = !isLowEnd; g.add(b);
-            const hd = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.48, 0.9), LM(0xf59e0b));
-            hd.position.set(1.2, 0.32, 0); g.add(hd);
-            const win = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.26, 0.98), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
-            win.position.set(-0.05, 0.62, 0); g.add(win);
-            const rf = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.08, 0.92), LM(0xf8fafc));
-            rf.position.set(-0.05, 0.86, 0); g.add(rf);
-            [[-0.65, -0.48], [0.65, -0.48], [-0.65, 0.48], [0.65, 0.48]].forEach(([x, z]) => {
-                const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.12, 12), LM(0x1e293b));
-                wh.rotation.x = Math.PI / 2; wh.position.set(x, 0.2, z); g.add(wh);
-            });
-            scene.add(g);
-        }
-
-        function createCartoonCar(px, pz, col) {
-            const g = new THREE.Group();
-            g.position.set(px, 0, pz);
-            const b = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.42, 0.85), LM(col));
-            b.position.y = 0.28; b.castShadow = !isLowEnd; g.add(b);
-            const cab = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.36, 0.76), LM(col));
-            cab.position.set(-0.1, 0.62, 0); g.add(cab);
-            const win = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.28, 0.78), new THREE.MeshBasicMaterial({ color: 0x7dd3fc }));
-            win.position.set(-0.1, 0.62, 0); g.add(win);
-            [[-0.45, -0.43], [0.45, -0.43], [-0.45, 0.43], [0.45, 0.43]].forEach(([x, z]) => {
-                const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.1, 10), LM(0x1e293b));
-                wh.rotation.x = Math.PI / 2; wh.position.set(x, 0.16, z); g.add(wh);
-            });
-            scene.add(g);
-        }
-
         // =====================================================
         // BUILD WORLD
         // =====================================================
-
-        // Areas
         P('', 483, 186, 390, 124, 0x6fb36b);
         P('Lap. Upacara', 570, 532, 298, 112, 0xcfe8c4);
         P('Tempat Parkir', 32, 788, 396, 68, 0xc3d5ee);
@@ -1048,9 +1078,7 @@ document.addEventListener('DOMContentLoaded', function () {
         P('Lap. Basket', 1288, 690, 88, 150, 0x9fc3ea);
         P('Lap. Voli', 1384, 690, 70, 150, 0x9fc3ea);
         P('Lap. Utama (Sepak Bola & Atletik)', 1190, 180, 340, 470, 0xb91c1c);
-        P('', 896, 18, 260, 44, 0xc3d5ee);
 
-        // Big buildings
         B('Lab CAM & CNC', 48, 22, 250, 52, 'g', 2.6);
         B('Basecamp Organisasi', 300, 22, 190, 44, 'o', 2);
         BStackedClassroomPair('L. PPLG', 'Aula RPL', 70, 94, 364, 108, 'b', 'o');
@@ -1061,7 +1089,6 @@ document.addEventListener('DOMContentLoaded', function () {
         B('B. Mesin', 70, 688, 418, 82, 'c', 3);
         B('R. Kesiswaan', 1458, 690, 78, 60, 'o', 2);
 
-        // Kantin + Kantin + R 30 stacked
         (function () {
             const x = 480, y = 20, w = 268, h = 42;
             const W = w * S * 0.93 - 0.025, D = h * S * 0.965 - 0.025;
@@ -1072,7 +1099,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const lowSide = wt(C.o, 1, D), lowFront = wt(C.o, 1, W / 2);
             const upSide = wt(C.b, 1, D), upFront = wt(C.b, 1, W);
 
-            // Kantin kiri (match DB)
             const kL = { name: 'Kantin', x: g.position.x - W / 4, z: g.position.z, W: W / 2, D, ht: lowerH, room: resolveRoom('Kantin'), isDecorative: isDecorative('Kantin') };
             const kLm = new THREE.Mesh(new THREE.BoxGeometry(W / 2, lowerH, D), [lowSide, lowSide, LM(0xc7c8c4), LM(0xc7c8c4), lowFront, lowFront]);
             kLm.position.set(-W / 4, lowerH / 2, 0);
@@ -1080,7 +1106,6 @@ document.addEventListener('DOMContentLoaded', function () {
             kLm.userData.room = kL;
             g.add(kLm); pk.push(kLm); roomsRegistry.push(kL);
 
-            // Kantin kanan (dekoratif)
             const kR = { name: 'Kantin (sayap)', x: g.position.x + W / 4, z: g.position.z, W: W / 2, D, ht: lowerH, room: null, isDecorative: true };
             const kRm = new THREE.Mesh(new THREE.BoxGeometry(W / 2, lowerH, D), [lowSide, lowSide, LM(0xc7c8c4), LM(0xc7c8c4), lowFront, lowFront]);
             kRm.position.set(W / 4, lowerH / 2, 0);
@@ -1088,12 +1113,10 @@ document.addEventListener('DOMContentLoaded', function () {
             kRm.userData.room = kR;
             g.add(kRm); pk.push(kRm); roomsRegistry.push(kR);
 
-            // Slab
             const slab = new THREE.Mesh(new THREE.BoxGeometry(W + 0.08, slabH, D + 0.08), LM(0xd6d3d1));
             slab.position.y = lowerH + slabH / 2;
             g.add(slab);
 
-            // R 30 di atas
             const r30 = { name: 'R 30', x: g.position.x, z: g.position.z, W, D, ht: upperH, room: resolveRoom('R 30'), isDecorative: isDecorative('R 30') };
             const up = new THREE.Mesh(new THREE.BoxGeometry(W, upperH, D), [upSide, upSide, LM(0xc7c8c4), LM(0xc7c8c4), upFront, upFront]);
             up.position.y = baseUpper + upperH / 2;
@@ -1109,18 +1132,20 @@ document.addEventListener('DOMContentLoaded', function () {
             g.add(roof);
 
             scene.add(g);
+
+            const tipL = addTooltip('Kantin', g.position.x - W / 4, lowerH + 0.7, g.position.z, isDecorative('Kantin') ? '#94a3b8' : conditionColor(kL.room));
+            tipL.userData.roomRef = kL;
+            const tipR30 = addTooltip('R 30', g.position.x, baseUpper + upperH + 1.0, g.position.z, isDecorative('R 30') ? '#94a3b8' : conditionColor(r30.room));
+            tipR30.userData.roomRef = r30;
         })();
 
-        // Kesenian & Studio Musik (upper wing)
         BUpperWingTwoRooms('R. Kesenian', 'Studio Musik', 748, 20, 100, 42, 'b');
 
-        // R Ki / R 29, R 1 / R 28, R 25 / R 27, R 24 / R 26 (stacked)
         BStackedClassroomPair('R KI', 'R 29', 480, 127, 90, 52, 'y', 'b');
-        BStackedClassroomPair('R 1', 'R 28', 570, 127, 90, 52, 'y', 'b');
+        BStackedClassroomPair('', 'R 28', 570, 127, 90, 52, 'y', 'b');
         BStackedClassroomPair('R 25', 'R 27', 660, 127, 90, 52, 'y', 'b');
         BStackedClassroomPair('R 24', 'R 26', 750, 127, 90, 52, 'y', 'b');
 
-        // Classroom grid right
         const xs = [896, 984, 1070];
         [['R 4', 'R 5', 'R 6', 537, 'y'], ['R 1', 'R 2', 'R 3', 623, 'y']].forEach(r => {
             for (let i = 0; i < 3; i++) {
@@ -1128,31 +1153,20 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Stacked classrooms row 1 (R18-23)
         BStackedClassroomPair('R 18', 'R 21', 896, 127, 76, 40, 'y', 'b');
         BStackedClassroomPair('R 19', 'R 22', 984, 127, 76, 40, 'y', 'b');
         BStackedClassroomPair('R 20', 'R 23', 1070, 127, 76, 40, 'y', 'b');
-
-        // Stacked classrooms row 2 (R12-17)
         BStackedClassroomPair('R 12', 'R 15', 896, 217, 76, 40, 'y', 'b');
         BStackedClassroomPair('R 13', 'R 16', 984, 217, 76, 40, 'y', 'b');
         BStackedClassroomPair('R 14', 'R 17', 1070, 217, 76, 40, 'y', 'b');
 
-        // R 9, 10, 11
         [['R 9', 910], ['R 10', 998], ['R 11', 1080]].forEach(a => B(a[0], a[1], 345, 86, 60, 'y', 2));
-
-        // R 7, 8
         B('R 7', 982, 436, 84, 60, 'y', 2);
         B('R 8', 1066, 436, 84, 60, 'y', 2);
-
-        // R 31, 32
         B('R 31', 1180, 26, 100, 60, 'y', 2);
         B('R 32', 1282, 26, 100, 60, 'y', 2);
-
-        // R. Olah Sampah
         B('R. Olah Sampah', 1400, 22, 144, 78, 'o', 1.6);
 
-        // Center block
         B('Gudang', 450, 340, 78, 50, 'y', 2);
         B('R Sarpra', 450, 392, 78, 40, 'y', 2);
         B('R UKS', 450, 434, 78, 40, 'y', 2);
@@ -1165,11 +1179,9 @@ document.addEventListener('DOMContentLoaded', function () {
         B('R. 33', 742, 340, 78, 64, 'y', 2);
         B('BK', 822, 340, 60, 64, 'y', 2);
 
-        // Stacked admin (R. Humas/R. Perpust, R. Waka/R 34)
         BStackedClassroomPair('R. Humas', 'R. Perpust', 552, 436, 95, 52, 'o', 'b');
         BStackedClassroomPair('R. Waka', 'R 34', 664, 436, 84, 52, 'o', 'b');
 
-        // Multimedia + R 35 + R 36 stacked (custom)
         (function () {
             const x = 752, y = 436, w = 130, h = 50;
             const W = w * S * 0.93 - 0.025, D = h * S * 0.965 - 0.025;
@@ -1209,9 +1221,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 mesh.userData.room = room;
                 pk.push(mesh);
                 roomsRegistry.push(room);
+                return room;
             };
-            makeUpper('R 35', -upperW / 2);
-            makeUpper('R 36', upperW / 2);
+            const r35 = makeUpper('R 35', -upperW / 2);
+            const r36 = makeUpper('R 36', upperW / 2);
 
             const fascia = new THREE.Mesh(new THREE.BoxGeometry(W + 0.32, 0.16, D + 0.32), LM(0x70443a));
             fascia.position.y = baseUpper + upperH + 0.08;
@@ -1220,15 +1233,21 @@ document.addEventListener('DOMContentLoaded', function () {
             roof.position.y = baseUpper + upperH + 0.12;
             g.add(roof);
             scene.add(g);
+
+            const tipY = baseUpper + upperH + 1.0;
+            const tip35 = addTooltip('R 35', g.position.x - upperW / 2, tipY, g.position.z, isDecorative('R 35') ? '#94a3b8' : conditionColor(r35.room));
+            tip35.userData.roomRef = r35;
+            const tip36 = addTooltip('R 36', g.position.x + upperW / 2, tipY, g.position.z, isDecorative('R 36') ? '#94a3b8' : conditionColor(r36.room));
+            tip36.userData.roomRef = r36;
+            const tipMM = addTooltip('R. Multimedia', g.position.x, lowerH + 0.7, g.position.z, isDecorative('R. Multimedia') ? '#94a3b8' : conditionColor(lowRoom.room));
+            tipMM.userData.roomRef = lowRoom;
         })();
 
-        // Bottom buildings
         B('LSP', 570, 662, 55, 40, 'o', 2);
         B('R KS', 626, 662, 68, 40, 'o', 2);
         B('R. TU', 570, 704, 122, 64, 'o', 2);
         B('R. Guru', 696, 662, 180, 106, 'o', 2);
 
-        // STAIRS
         StairForRow(70, 94, 364, 108);
         StairForRow(748, 20, 100, 42, 'right');
         StairForRow(480, 127, 360, 52, 'right');
@@ -1236,161 +1255,31 @@ document.addEventListener('DOMContentLoaded', function () {
         StairForRow(896, 217, 250, 40);
         StairAtPoint(655.5, 436, 52);
 
-        // Roads
         F(540, 320, 370, 370); F(880, 55, 300, 650); F(1180, 110, 370, 50); F(20, 300, 430, 30);
         F(755, 690, 60, 175);
 
-        // Trees
         [[520, 215], [600, 290], [690, 200], [780, 290], [850, 225], [500, 300], [520, 660], [870, 335], [880, 95], [1165, 240], [1165, 380], [1165, 540], [1545, 210], [1545, 330], [1545, 450], [1545, 570], [1545, 650], [440, 28], [60, 860], [480, 760], [1000, 860], [1560, 500]]
             .forEach((p, i) => tree(p[0], p[1], 0.95 + (i % 3) * 0.2));
 
-        // Vehicles - West parking
-        for (let i = 0; i < 8; i++) {
-            const vx = (60 + i * 46 - CX) * S, vz = (822 - CY) * S;
-            if (i < 2) createSchoolBus(vx, vz);
-            else createCartoonCar(vx, vz, [0xef4444, 0x0284c7, 0xf8fafc, 0x10b981, 0xf97316, 0x334155][(i - 2) % 6]);
-        }
-        // East parking
-        for (let i = 0; i < 5; i++) {
-            const vx = (1050 + i * 45 - CX) * S, vz = (790 - CY) * S;
-            if (i === 0) createSchoolBus(vx, vz);
-            else createCartoonCar(vx, vz, [0xef4444, 0x0284c7, 0xf59e0b, 0xf8fafc][(i - 1) % 4]);
-        }
-
-        // Lapangan Tenis-Basket court lines
-        (function () {
-            const x0 = (1310 - CX) * S, x1 = (1514 - CX) * S;
-            const z0 = (710 - CY) * S, z1 = (820 - CY) * S;
-            const P = [[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]];
-            const mk = a => new THREE.Line(
-                new THREE.BufferGeometry().setFromPoints(a.map(p => new THREE.Vector3(p[0], 0.025, p[1]))),
-                new THREE.LineBasicMaterial({ color: 0xffffff })
-            );
-            scene.add(mk(P));
-            scene.add(mk([[(x0 + x1) / 2, z0], [(x0 + x1) / 2, z1]]));
-        })();
-
-        // Flagpole + Bendera Merah Putih
+        // Bendera
         (function () {
             const fx = (720 - CX) * S, fz = (590 - CY) * S;
             const fpBase = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.85, 0.22, 16), LM(0xf1f5f9));
-            fpBase.position.set(fx, 0.11, fz);
-            scene.add(fpBase);
-
+            fpBase.position.set(fx, 0.11, fz); scene.add(fpBase);
             const fp = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 6, 12), LM(0xe2e8f0));
-            fp.position.set(fx, 3, fz);
-            fp.castShadow = !isLowEnd;
-            scene.add(fp);
-
+            fp.position.set(fx, 3, fz); fp.castShadow = !isLowEnd; scene.add(fp);
             const fpBall = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 10), LM(0xf59e0b));
-            fpBall.position.set(fx, 6.05, fz);
-            scene.add(fpBall);
-
+            fpBall.position.set(fx, 6.05, fz); scene.add(fpBall);
             const cv = document.createElement('canvas');
             cv.width = 128; cv.height = 80;
             const g = cv.getContext('2d');
             g.fillStyle = '#e11d48'; g.fillRect(0, 0, 128, 40);
             g.fillStyle = '#ffffff'; g.fillRect(0, 40, 128, 40);
             const tex = new THREE.CanvasTexture(cv);
-            const flag = new THREE.Mesh(
-                new THREE.PlaneGeometry(1.4, 0.88),
-                new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide })
-            );
-            flag.position.set(fx + 0.7, 5.5, fz);
-            flag.castShadow = !isLowEnd;
+            const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.88), new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }));
+            flag.position.set(fx + 0.7, 5.5, fz); flag.castShadow = !isLowEnd;
             scene.add(flag);
         })();
-
-        // Gate + Pos Satpam
-        (function () {
-            const gx = (785 - CX) * S, gz = (865 - CY) * S;
-            const gG = new THREE.Group();
-            gG.position.set(gx, 0, gz);
-
-            const matPillar = LM(0xf8fafc), matTrim = LM(0x16a34a), matDark = LM(0x334155), matGlass = LM(0x7dd3fc);
-
-            [-4.9, 4.9].forEach(x => {
-                const pil = new THREE.Mesh(new THREE.BoxGeometry(0.55, 2.1, 0.65), matPillar);
-                pil.position.set(x, 1.05, 0);
-                pil.castShadow = !isLowEnd;
-                gG.add(pil);
-                const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.16, 0.68), matTrim);
-                stripe.position.set(x, 1.72, 0);
-                gG.add(stripe);
-                const cap = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.14, 0.8), LM(0x15803d));
-                cap.position.set(x, 2.17, 0);
-                gG.add(cap);
-            });
-
-            // Pos Satpam
-            const booth = new THREE.Group();
-            booth.position.set(0, 0, 0.15);
-            gG.add(booth);
-            const base = new THREE.Mesh(new THREE.BoxGeometry(1.65, 1.45, 1.35), LM(0xfef3c7));
-            base.position.y = 0.73;
-            base.castShadow = !isLowEnd;
-            booth.add(base);
-            const roofBooth = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.18, 1.58), LM(0x16a34a));
-            roofBooth.position.y = 1.55;
-            roofBooth.castShadow = !isLowEnd;
-            booth.add(roofBooth);
-            const winF = new THREE.Mesh(new THREE.BoxGeometry(1.18, 0.55, 0.045), matGlass);
-            winF.position.set(0, 0.98, 0.84);
-            booth.add(winF);
-            const winS = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.52, 0.82), matGlass);
-            winS.position.set(0.84, 0.98, 0);
-            booth.add(winS);
-
-            const cv1 = document.createElement('canvas');
-            cv1.width = 256; cv1.height = 80;
-            const g1 = cv1.getContext('2d');
-            g1.fillStyle = '#166534'; g1.fillRect(0, 0, 256, 80);
-            g1.fillStyle = '#ffffff'; g1.font = 'bold 28px sans-serif'; g1.textAlign = 'center'; g1.textBaseline = 'middle';
-            g1.fillText('POS SATPAM', 128, 40);
-            const t1 = new THREE.CanvasTexture(cv1);
-            const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.55, 0.42), new THREE.MeshBasicMaterial({ map: t1, side: THREE.DoubleSide }));
-            sign.position.set(0, 1.82, 0.82);
-            booth.add(sign);
-
-            // Banner
-            const banner = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.48, 0.16), matDark);
-            banner.position.set(0, 2.72, 0);
-            gG.add(banner);
-
-            const cv2 = document.createElement('canvas');
-            cv2.width = 768; cv2.height = 96;
-            const g2 = cv2.getContext('2d');
-            g2.fillStyle = '#166534'; g2.fillRect(0, 0, 768, 96);
-            g2.fillStyle = '#ffffff'; g2.font = 'bold 36px sans-serif'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
-            g2.fillText('SMK NEGERI 2 KARANGANYAR', 384, 48);
-            const t2 = new THREE.CanvasTexture(cv2);
-            const label2 = new THREE.Mesh(new THREE.PlaneGeometry(5.35, 0.43), new THREE.MeshBasicMaterial({ map: t2, side: THREE.DoubleSide }));
-            label2.position.set(0, 2.72, 0.095);
-            gG.add(label2);
-
-            scene.add(gG);
-        })();
-
-        // Perimeter wall
-        [[-38.3, -22.2, 76.7, 0.2], [-38.3, 21.5, 33.1, 0.2], [5.2, 21.5, 33.2, 0.2], [-38.3, -22.2, 0.2, 43.7], [38.4, -22.2, 0.2, 43.7]].forEach(a => {
-            const wallH = 1.15;
-            const f = new THREE.Mesh(new THREE.BoxGeometry(a[2], wallH, a[3]), LM(0xf8f5e9));
-            f.position.set(a[0] + a[2] / 2, wallH / 2, a[1] + a[3] / 2);
-            f.castShadow = f.receiveShadow = !isLowEnd;
-            scene.add(f);
-            const cap = new THREE.Mesh(new THREE.BoxGeometry(a[2] + (a[2] > 1 ? 0.1 : 0.04), 0.1, a[3] + (a[3] > 1 ? 0.1 : 0.04)), LM(0x16a34a));
-            cap.position.set(f.position.x, wallH + 0.05, f.position.z);
-            scene.add(cap);
-            if (a[2] > 20) {
-                const count = Math.floor(a[2] / 5.5);
-                for (let i = 1; i < count; i++) {
-                    const x = a[0] + i * a[2] / count;
-                    const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, wallH + 0.08, 0.28), LM(0x15803d));
-                    post.position.set(x, wallH / 2, a[1] + a[3] / 2);
-                    scene.add(post);
-                }
-            }
-        });
 
         // =====================================================
         // CAMERA & INTERACTION
@@ -1410,6 +1299,118 @@ document.addEventListener('DOMContentLoaded', function () {
             cam.lookAt(tgt);
         }
         updCam();
+
+        // ============================================================
+        // UPDATE TOOLTIP SCALE — TOOLTIP MENGEcil SAAT ZOOM OUT
+        // ============================================================
+        const BASE_DIST = 75;          // jarak default kamera
+        const MIN_SCALE = 0.35;        // batas minimum tooltip
+        const MAX_SCALE = 1.35;        // batas maksimum tooltip
+
+        function updateTooltipScale() {
+            const ratio = BASE_DIST / Math.max(rad, 1);
+            const scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, ratio));
+
+            labelSprites.forEach(sprite => {
+                const bs = sprite.userData.baseScale || { x: 6.5, y: 2.0 };
+                sprite.scale.set(bs.x * scale, bs.y * scale, 1);
+
+                // Kalau di-hidden declutter, opacity tetap 0
+                if (sprite.userData._hiddenByDeclutter) {
+                    sprite.material.opacity = 0;
+                } else {
+                    sprite.material.opacity = Math.max(0.3, Math.min(1, scale));
+                }
+            });
+        }
+
+                // ============================================================
+        // DECLUTTER TOOLTIPS — sembunyikan yang numpuk
+        // ============================================================
+        let lastDeclutterTime = 0;
+        const DECLUTTER_INTERVAL = 150; // ms — jangan tiap frame, berat
+        const COLLISION_RADIUS = 110;   // px — radius tabrakan di layar
+        const MOBILE_RADIUS = 70;       // px — mobile lebih kecil
+        const isMobile = () => window.innerWidth < 768;
+
+        function declutterTooltips() {
+            const now = performance.now();
+            if (now - lastDeclutterTime < DECLUTTER_INTERVAL) return;
+            lastDeclutterTime = now;
+
+            if (!labelSprites.length) return;
+
+            const rect = ren.domElement.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
+            const radius = isMobile() ? MOBILE_RADIUS : COLLISION_RADIUS;
+
+            // Kumpulkan label yang visible, hitung posisi screen + jarak ke kamera
+            const visible = [];
+            labelSprites.forEach(sprite => {
+                if (!sprite.visible) return;
+
+                // Cek ada di depan kamera atau tidak
+                const pos = sprite.position.clone();
+                const proj = pos.clone().project(cam);
+
+                // Skip kalau di belakang kamera
+                if (proj.z > 1 || proj.z < -1) {
+                    sprite.userData._onScreen = false;
+                    return;
+                }
+
+                const sx = (proj.x * 0.5 + 0.5) * w;
+                const sy = (-proj.y * 0.5 + 0.5) * h;
+
+                // Skip kalau keluar viewport
+                if (sx < -50 || sx > w + 50 || sy < -50 || sy > h + 50) {
+                    sprite.userData._onScreen = false;
+                    return;
+                }
+
+                const distToCam = cam.position.distanceTo(sprite.position);
+
+                sprite.userData._onScreen = true;
+                sprite.userData._screenX = sx;
+                sprite.userData._screenY = sy;
+                sprite.userData._distToCam = distToCam;
+
+                visible.push(sprite);
+            });
+
+            // Sort: paling dekat kamera = prioritas (paling depan)
+            visible.sort((a, b) => a.userData._distToCam - b.userData._distToCam);
+
+            // Tempat menyimpan label yang sudah ditampilkan
+            const kept = [];
+
+            visible.forEach(sprite => {
+                const sx = sprite.userData._screenX;
+                const sy = sprite.userData._screenY;
+
+                let collides = false;
+                for (const other of kept) {
+                    const ox = other.userData._screenX;
+                    const oy = other.userData._screenY;
+                    const d = Math.hypot(sx - ox, sy - oy);
+                    if (d < radius) {
+                        collides = true;
+                        break;
+                    }
+                }
+
+                if (collides) {
+                    // Numpuk dengan yang lebih depan → sembunyikan
+                    sprite.material.opacity = 0;
+                    sprite.userData._hiddenByDeclutter = true;
+                } else {
+                    kept.push(sprite);
+                    sprite.userData._hiddenByDeclutter = false;
+                    // Opacity akan di-set oleh updateTooltipScale
+                }
+            });
+        }
 
         const el = ren.domElement;
         el.addEventListener('contextmenu', e => e.preventDefault());
@@ -1469,28 +1470,20 @@ document.addEventListener('DOMContentLoaded', function () {
                                 code: '—',
                                 condition: 'dekoratif',
                                 conditionLabel: 'Dekoratif',
-                                floor: '—',
                                 location: 'Bangunan ini hanya untuk dekorasi peta 3D.',
                                 capacity: '—',
                                 health: '—',
-                                url: '#',
-                                reportUrl: '#',
-                                photo: '',
+                                url: '#', reportUrl: '#', photo: '',
                             });
                         } else {
                             const r = obj.room;
                             window.openRoomModal({
-                                id: r.id,
-                                name: r.name,
-                                code: r.code,
+                                id: r.id, name: r.name, code: r.code,
                                 condition: typeof r.condition === 'object' ? r.condition.value : r.condition,
                                 conditionLabel: r.conditionLabel || (typeof r.condition === 'object' ? r.condition.label : 'Tersedia'),
-                                floor: r.map_floor || r.floor || '—',
                                 location: r.description || '',
-                                capacity: r.capacity,
-                                health: r.health_score,
-                                url: r.detail_url || '#',
-                                reportUrl: r.report_url || '#',
+                                capacity: r.capacity, health: r.health_score,
+                                url: r.detail_url || '#', reportUrl: r.report_url || '#',
                                 photo: r.photo_url || '',
                             });
                         }
@@ -1506,6 +1499,7 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             fly = false;
             rad = Math.min(160, Math.max(4, rad * (1 + e.deltaY * 0.001)));
+            updateTooltipScale();
             updCam();
         }, { passive: false });
 
@@ -1518,6 +1512,7 @@ document.addEventListener('DOMContentLoaded', function () {
             fly = false;
             th = def.th; ph = def.ph; rad = def.rad;
             tgt.set(0, 0, 0);
+            updateTooltipScale();
             updCam();
         });
 
@@ -1543,11 +1538,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 const match = !query || (obj.name || '').toLowerCase().includes(query);
                 m.visible = match;
             });
+            labelSprites.forEach(sprite => {
+                const ref = sprite.userData.roomRef;
+                if (!ref) return;
+                const match = !query || (ref.name || '').toLowerCase().includes(query);
+                sprite.visible = match;
+            });
         };
 
-        // Render loop
+        window.toggleTooltips = function (show) {
+            labelSprites.forEach(s => s.visible = show);
+            return show;
+        };
+
         let rendering = true;
         document.addEventListener('visibilitychange', () => { rendering = !document.hidden; });
+
+        updateTooltipScale();
 
         function loop() {
             requestAnimationFrame(loop);
@@ -1556,13 +1563,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 tgt.lerp(gt, 0.08);
                 rad += (gr - rad) * 0.08;
                 ph += (gp - ph) * 0.08;
+                updateTooltipScale();
             }
             if (auto && !fly) th += 0.003;
 
-            // Animasi dot rute
+            declutterTooltips();
+
+            const arrows = window.__peta3D?._billboardArrows;
+            if (arrows && arrows.length) {
+                arrows.forEach(a => a.quaternion.copy(cam.quaternion));
+            }
+
             const anim = window.__peta3D?._routeAnim;
             if (anim && anim.active && anim.curve && anim.dots.length) {
-                const t = performance.now() * 0.0003; // kecepatan
+                const t = performance.now() * 0.0003;
                 anim.dots.forEach((dot, i) => {
                     const prog = (t + i / anim.dots.length) % 1;
                     const pt = anim.curve.getPointAt(prog);
@@ -1575,10 +1589,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         loop();
 
-        // API export
         window.__peta3D = {
             scene, cam, ren, THREE,
             roomsRegistry, S, CX, CY,
+            labelSprites,
+            stairsRegistry,
             toWorld: (x, z) => ({ x: (x - CX) * S, z: (z - CY) * S }),
             flyTo: (worldX, worldZ, ht = 3, distance = 25) => {
                 gt.set(worldX, ht * 0.3, worldZ);
@@ -1586,7 +1601,7 @@ document.addEventListener('DOMContentLoaded', function () {
             },
         };
 
-        console.log(`[3D] ${roomsRegistry.length} objek, ${pk.length} pickable.`);
+        console.log(`[3D] ${roomsRegistry.length} objek, ${pk.length} pickable, ${labelSprites.length} tooltip.`);
         window.dispatchEvent(new CustomEvent('3d-ready', { detail: { count: roomsRegistry.length } }));
     }
 

@@ -6,7 +6,7 @@
 
     <style>[x-cloak]{display:none !important}</style>
 
-    <main x-data="reportModal()" class="min-h-screen bg-[#ffff] px-4 py-10 sm:px-6 lg:px-8">
+    <main x-data="reportModal" class="min-h-screen bg-[#ffff] px-4 py-10 sm:px-6 lg:px-8">
 
         {{-- HEADER --}}
         <div class="mb-8 text-center">
@@ -404,11 +404,11 @@
                         </span>
                         <h3 class="mt-5 text-lg font-semibold text-slate-800">Laporan terkirim</h3>
                         <p class="mt-1 max-w-xs text-sm text-slate-500">Terima kasih. Tim Sarpras akan meninjau laporan Anda.</p>
-                        <a href="{{ route('public.rooms.index') }}"
-                           class="mt-7 inline-flex h-[44px] items-center gap-2 rounded-lg bg-gradient-to-b from-[#8E71D2] to-[#6042B0] px-8 text-sm font-semibold text-white shadow-md transition hover:brightness-110">
-                            <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                            Kembali ke Sarpras
-                        </a>
+                        <button type="button" @click="closeAndReset()"
+                                class="mt-7 inline-flex h-[44px] items-center gap-2 rounded-lg bg-gradient-to-b from-[#8E71D2] to-[#6042B0] px-8 text-sm font-semibold text-white shadow-md transition hover:brightness-110">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            Selesai
+                        </button>
                     </div>
 
                 </div>
@@ -417,148 +417,9 @@
 
     </main>
 
-    @php
-        $roomsData = $rooms->map(fn($r) => [
-            'id'    => $r->id,
-            'name'  => $r->name,
-            'items' => $r->itemRooms->map(fn($ir) => [
-                'id'       => $ir->id,
-                'name'     => $ir->item->name,
-                'quantity' => $ir->quantity,
-            ])->values()->toArray(),
-        ])->toArray();
-    @endphp
-
+    {{-- Data rooms untuk Alpine — di-pass dari controller --}}
     <script>
-        function reportModal() {
-            return {
-                isOpen: false,
-                sent: false,
-                step: 1,
-                submitting: false,
-                dragging: false,
-                form: { nama: '', room_id: '', item_room_id: '', deskripsi: '' },
-                file: null,
-                preview: null,
-                errors: {},
-                rooms: {!! json_encode($roomsData) !!},
-                maxSize: 5 * 1024 * 1024,
-
-                init() {
-                    this.$watch('isOpen', v => document.body.classList.toggle('overflow-hidden', v));
-                    this.$nextTick(() => {
-                        if (typeof lucide !== 'undefined') lucide.createIcons();
-                    });
-                },
-
-                get filteredItems() {
-                    const room = this.rooms.find(r => r.id == this.form.room_id);
-                    return room ? room.items : [];
-                },
-
-                get roomName() {
-                    const room = this.rooms.find(r => r.id == this.form.room_id);
-                    return room ? room.name : '';
-                },
-
-                get itemRoomName() {
-                    if (!this.form.item_room_id) return null;
-                    const room = this.rooms.find(r => r.id == this.form.room_id);
-                    if (!room) return null;
-                    const item = room.items.find(i => i.id == this.form.item_room_id);
-                    return item ? item.name : null;
-                },
-
-                circle(n) {
-                    return this.step >= n
-                        ? 'bg-gradient-to-br from-[#8E71D2] to-[#5A3AA4] text-white'
-                        : 'bg-slate-200 text-slate-400';
-                },
-                label(n) {
-                    return this.step >= n ? 'text-[#6C4AB6]' : 'text-slate-400';
-                },
-
-                open() {
-                    this.isOpen = true;
-                    this.$nextTick(() => {
-                        if (typeof lucide !== 'undefined') lucide.createIcons();
-                        if (this.$refs.form) {
-                            const first = this.$refs.form.querySelector('input[name="reporter_name"]');
-                            if (first) first.focus();
-                        }
-                    });
-                },
-                close() {
-                    if (this.submitting) return;
-                    this.isOpen = false;
-                },
-
-                validateStep1() {
-                    this.errors = {};
-                    if (!this.form.nama.trim()) this.errors.nama = 'Nama wajib diisi.';
-                    if (!this.form.room_id) this.errors.room_id = 'Ruangan wajib dipilih.';
-                    if (!this.form.deskripsi.trim()) this.errors.deskripsi = 'Deskripsi wajib diisi.';
-                    return Object.keys(this.errors).length === 0;
-                },
-
-                next() {
-                    if (this.step === 1 && !this.validateStep1()) return;
-                    if (this.step < 3) {
-                        this.step++;
-                        this.$nextTick(() => {
-                            if (typeof lucide !== 'undefined') lucide.createIcons();
-                        });
-                    }
-                },
-                back() {
-                    this.errors = {};
-                    if (this.step > 1) this.step--;
-                },
-
-                submit() {
-                    if (!this.validateStep1()) {
-                        this.step = 1;
-                        return;
-                    }
-                    this.submitting = true;
-                    this.$refs.form.submit();
-                },
-
-                pickFile() { this.$refs.foto.click(); },
-                onSelect(e) { this.setFile(e.target.files[0], false); },
-                onDrop(e) {
-                    this.dragging = false;
-                    const f = e.dataTransfer.files[0];
-                    if (f) this.setFile(f, true);
-                },
-
-                setFile(file, syncInput) {
-                    if (!file) return;
-                    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-                        alert('Format harus JPG atau PNG.');
-                        return;
-                    }
-                    if (file.size > this.maxSize) {
-                        alert('Maksimal 5MB.');
-                        return;
-                    }
-                    if (this.preview) URL.revokeObjectURL(this.preview);
-                    this.file = file;
-                    this.preview = URL.createObjectURL(file);
-                    if (syncInput) {
-                        const dt = new DataTransfer();
-                        dt.items.add(file);
-                        this.$refs.foto.files = dt.files;
-                    }
-                },
-                removeFile() {
-                    if (this.preview) URL.revokeObjectURL(this.preview);
-                    this.file = null;
-                    this.preview = null;
-                    if (this.$refs.foto) this.$refs.foto.value = '';
-                },
-            };
-        }
+        window.pengaduanRoomsData = @json($roomsData);
     </script>
 
 @endsection

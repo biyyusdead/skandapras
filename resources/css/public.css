@@ -68,3 +68,230 @@ html { background-color: #FAFAF7; }
 .animate-fade-in-up        { animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .stagger-2                 { animation-delay: 0.15s; }
 
+   /* Bottom nav — sembunyikan scrollbar, biar rapi */
+    nav[aria-label="Navigasi utama"] {
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    nav[aria-label="Navigasi utama"] a,
+    nav[aria-label="Navigasi utama"] button {
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+    }
+    
+    /* Safe area support untuk iPhone notch */
+    @supports (padding: env(safe-area-inset-bottom)) {
+        nav[aria-label="Navigasi utama"] {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    }
+    
+    /* Cegah scroll bawah hilang di iOS saat keyboard muncul */
+    @media (max-width: 1023px) {
+        body {
+            overscroll-behavior-y: none;
+        }
+    }
+
+/* ============================================================
+   Scroll Reveal (Shared across all public views)
+   ============================================================ */
+.scroll-reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.scroll-reveal.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.scroll-reveal[data-delay="100"] { transition-delay: 100ms; }
+.scroll-reveal[data-delay="200"] { transition-delay: 200ms; }
+.scroll-reveal[data-delay="300"] { transition-delay: 300ms; }
+.scroll-reveal[data-delay="400"] { transition-delay: 400ms; }
+
+/* Filter buttons (shared) */
+.filter-btn.active { background-color: #6C4AB6; color: #fff; border-color: #6C4AB6; }
+
+@media (prefers-reduced-motion: reduce) {
+    .scroll-reveal {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+    }
+}
+
+/* ============================================================
+   Preloader Styles
+   ============================================================ */
+.skandapras-preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.35s ease-out, visibility 0.35s ease-out;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+.skandapras-preloader.is-hidden {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    display: none !important;
+}
+
+.skandapras-preloader.is-opening {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+}
+
+.preloader-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: #FAFAF7;
+    transition: opacity 0.3s ease-out;
+}
+
+.preloader-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.skandapras-preloader.is-opening .preloader-content {
+    opacity: 0;
+    transform: scale(0.96);
+}
+
+.preloader-brand-wrapper {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preloader-logo {
+    position: relative;
+    z-index: 2;
+    width: 64px;
+    height: 64px;
+    filter: drop-shadow(0 8px 16px rgba(108, 74, 182, 0.25));
+}
+
+.preloader-glow {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(108, 74, 182, 0.25) 0%, rgba(245, 158, 11, 0.15) 60%, transparent 100%);
+    filter: blur(8px);
+    z-index: 1;
+    animation: preloaderPulse 2s ease-in-out infinite;
+}
+
+@keyframes preloaderPulse {
+    0%, 100% { transform: scale(0.95); opacity: 0.6; }
+    50%      { transform: scale(1.15); opacity: 1; }
+}
+
+.preloader-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skandapras-preloader {
+        display: none !important;
+    }
+}
+
+/* ============================================================
+   Alumni Card — smooth hover and transitions
+   ============================================================ */
+.alumni-card {
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+.alumni-card:hover {
+    transform: translate3d(0, -8px, 0);
+    border-color: theme('colors.primary.200', #99f6e4);
+}
+.alumni-card__shadow {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 20px 40px -12px rgba(15, 118, 110, 0.18), 0 8px 20px -8px rgba(15, 118, 110, 0.10);
+    opacity: 0;
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    z-index: 0;
+}
+.alumni-card:hover .alumni-card__shadow { opacity: 1; }
+
+.alumni-fade {
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity;
+}
+
+.alumni-photo {
+    transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+    transform: translateZ(0);
+}
+.alumni-card:hover .alumni-photo {
+    transform: translate3d(0, -4px, 0) scale(1.03);
+}
+
+.alumni-title { transition: color 0.4s ease-out; }
+.alumni-card:hover .alumni-title { color: theme('colors.primary.700', #0f766e); }
+
+.alumni-divider {
+    transform-origin: center;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+}
+.alumni-card:hover .alumni-divider { transform: scaleX(1.7); }
+
+.alumni-accent {
+    transform: scaleX(0);
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+}
+.alumni-card:hover .alumni-accent { transform: scaleX(1); }
+
+@media (prefers-reduced-motion: reduce) {
+    .alumni-card,
+    .alumni-card__shadow,
+    .alumni-fade,
+    .alumni-photo,
+    .alumni-divider,
+    .alumni-accent,
+    .alumni-title {
+        transition: none !important;
+    }
+    .alumni-card:hover { transform: none; }
+}

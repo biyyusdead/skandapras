@@ -26,7 +26,7 @@ class NewsController extends Controller
                 });
             })
             ->latest('published_at')
-            ->paginate(9)
+            ->paginate(6)
             ->withQueryString();
 
         return view('public.news.index', [
