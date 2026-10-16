@@ -21,7 +21,7 @@
     @stack('styles')
 </head>
 
-<body class="relative bg-surface-50 text-surface-800 font-sans antialiased pb-20 lg:pb-0">
+<body class="relative bg-surface-50 text-surface-800 font-sans antialiased">
 
     {{-- ============================================================ --}}
     {{-- GLOBAL DECORATIVE BACKGROUND --}}
@@ -823,92 +823,11 @@
                        opacity-0 translate-y-4 pointer-events-none
                        transition-all duration-300
                        hover:-translate-y-1
-                       left-5 bottom-24
+                       left-5 bottom-5
                        lg:bottom-6">
             <i data-lucide="arrow-up" class="w-5 h-5"></i>
         </button>
     </div>{{-- end content wrapper --}}
-
-        {{-- ═══════════════════════════════════════════════════════════ --}}
-    {{-- MOBILE BOTTOM NAVIGATION — hanya tampil < lg --}}
-    {{-- ═══════════════════════════════════════════════════════════ --}}
-    @php
-        $isHome = request()->routeIs('public.home');
-        $isPrestasi = request()->routeIs('public.kesiswaan.prestasi.*');
-    @endphp
-
-        <nav x-data="{ drawerOpen: false }"
-         class="lg:hidden fixed bottom-0 left-0 right-0 z-[90]
-                bg-white/95 backdrop-blur-md
-                border-t border-surface-200
-                shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.08)]"
-         style="padding-bottom: env(safe-area-inset-bottom, 0px);"
-         aria-label="Navigasi utama">
-
-        <div class="grid grid-cols-5 items-center h-16 relative">
-
-            {{-- 1. Beranda --}}
-            <a href="{{ url('/') }}"
-               class="flex flex-col items-center justify-center gap-1 h-full
-                      {{ $isHome ? 'text-primary-600' : 'text-surface-400' }}
-                      transition-colors duration-200">
-                <i data-lucide="home" class="w-5 h-5"></i>
-                <span class="text-[10px] font-semibold">Beranda</span>
-            </a>
-
-            {{-- 2. Berita --}}
-            <a href="{{ route('public.news.index') }}"
-               class="flex flex-col items-center justify-center gap-1 h-full
-                      {{ request()->routeIs('public.news.*') ? 'text-primary-600' : 'text-surface-400' }}
-                      transition-colors duration-200">
-                <i data-lucide="newspaper" class="w-5 h-5"></i>
-                <span class="text-[10px] font-semibold">Berita</span>
-            </a>
-
-            {{-- 3. Chatbot (TENGAH) --}}
-            <div class="relative flex justify-center h-full">
-                <button type="button"
-                        id="bottom-chatbot-btn"
-                        @click="drawerOpen = false; window.dispatchEvent(new CustomEvent('open-chatbot'))"
-                        aria-label="Buka Chatbot"
-                        class="absolute -top-5 w-14 h-14 rounded-xl
-                               bg-white
-                               shadow-lg shadow-primary-500/40
-                               ring-4 ring-white
-                               flex items-center justify-center
-                               hover:scale-105 active:scale-95
-                               transition-transform duration-200 overflow-hidden p-0">
-                    <img src="{{ asset('assets/images/chatbot/chatbot.webp') }}"
-                         alt="Chatbot"
-                         class="w-full h-full object-cover block scale-125"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <span class="w-full h-full hidden items-center justify-center bg-gradient-to-br from-primary-600 to-primary-800">
-                        <i data-lucide="message-circle" class="w-6 h-6 text-white"></i>
-                    </span>
-                </button>
-                <span class="absolute bottom-0 text-[10px] font-semibold text-surface-400">
-                    Tanya
-                </span>
-            </div>
-
-            {{-- 4. Prestasi --}}
-            <a href="{{ route('public.kesiswaan.prestasi.index') }}"
-               class="flex flex-col items-center justify-center gap-1 h-full
-                      {{ $isPrestasi ? 'text-primary-600' : 'text-surface-400' }}
-                      transition-colors duration-200">
-                <i data-lucide="trophy" class="w-5 h-5"></i>
-                <span class="text-[10px] font-semibold">Prestasi</span>
-            </a>
-
-            {{-- 5. Peta --}}
-            <a href="{{ route('public.rooms.map') }}"
-               class="flex flex-col items-center justify-center gap-1 h-full
-                      {{ request()->routeIs('public.rooms.map') ? 'text-primary-600' : 'text-surface-400' }}
-                      transition-colors duration-200">
-                <i data-lucide="map-pin" class="w-5 h-5"></i>
-                <span class="text-[10px] font-semibold">Peta</span>
-            </a>
-        </div>
 
         {{-- ═══════════════════════════════════════════════════════ --}}
         {{-- DRAWER "LAINNYA" — slide dari kanan --}}

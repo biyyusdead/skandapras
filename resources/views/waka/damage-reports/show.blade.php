@@ -320,12 +320,8 @@
                             {{-- Jalur A: Kerusakan Ringan --}}
                             <div class="p-3.5 rounded-xl border border-teal-200 bg-teal-50/50 space-y-2.5">
                                 <div class="flex items-center gap-2 text-teal-800 font-semibold text-xs">
-                                    <i data-lucide="wrench" class="w-4 h-4 text-teal-600"></i>
                                     <span>Jalur A — Kerusakan Ringan</span>
                                 </div>
-                                <p class="text-[11px] text-teal-700 leading-relaxed">
-                                    Disetujui langsung oleh Waka Sarpras tanpa perlu persetujuan Kepala Sekolah. Langsung dapat ditugaskan ke petugas.
-                                </p>
                                 <form action="{{ route('waka.damage-reports.approve-minor', $report) }}" method="POST" class="space-y-2 pt-1">
                                     @csrf
                                     <input type="hidden" name="damage_category" value="ringan">
@@ -339,12 +335,8 @@
                             {{-- Jalur B: Kerusakan Besar --}}
                             <div class="p-3.5 rounded-xl border border-rose-200 bg-rose-50/50 space-y-2.5">
                                 <div class="flex items-center gap-2 text-rose-800 font-semibold text-xs">
-                                    <i data-lucide="shield-alert" class="w-4 h-4 text-rose-600"></i>
                                     <span>Jalur B — Kerusakan Besar</span>
                                 </div>
-                                <p class="text-[11px] text-rose-700 leading-relaxed">
-                                    Memerlukan persetujuan Kepala Sekolah (Tahap 2) sebelum penugasan perbaikan dapat dimulai.
-                                </p>
                                 <form action="{{ route('waka.damage-reports.submit-major', $report) }}" method="POST" class="space-y-2 pt-1">
                                     @csrf
                                     <input type="hidden" name="damage_category" value="berat">
@@ -540,4 +532,4 @@
         </div>
     @endif
 
-@endsection
+@endsection

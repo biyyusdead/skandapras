@@ -1337,77 +1337,59 @@ document.addEventListener('DOMContentLoaded', function () {
             const now = performance.now();
             if (now - lastDeclutterTime < DECLUTTER_INTERVAL) return;
             lastDeclutterTime = now;
-
             if (!labelSprites.length) return;
 
             const rect = ren.domElement.getBoundingClientRect();
-            const w = rect.width;
-            const h = rect.height;
+            const w = rect.width, h = rect.height;
             const radius = isMobile() ? MOBILE_RADIUS : COLLISION_RADIUS;
 
-            // Kumpulkan label yang visible, hitung posisi screen + jarak ke kamera
             const visible = [];
             labelSprites.forEach(sprite => {
                 if (!sprite.visible) return;
-
-                // Cek ada di depan kamera atau tidak
-                const pos = sprite.position.clone();
-                const proj = pos.clone().project(cam);
-
-                // Skip kalau di belakang kamera
-                if (proj.z > 1 || proj.z < -1) {
-                    sprite.userData._onScreen = false;
-                    return;
-                }
-
+                const proj = sprite.position.clone().project(cam);
+                if (proj.z > 1 || proj.z < -1) return;
                 const sx = (proj.x * 0.5 + 0.5) * w;
                 const sy = (-proj.y * 0.5 + 0.5) * h;
-
-                // Skip kalau keluar viewport
-                if (sx < -50 || sx > w + 50 || sy < -50 || sy > h + 50) {
-                    sprite.userData._onScreen = false;
-                    return;
-                }
-
-                const distToCam = cam.position.distanceTo(sprite.position);
-
-                sprite.userData._onScreen = true;
+                if (sx < -50 || sx > w + 50 || sy < -50 || sy > h + 50) return;
                 sprite.userData._screenX = sx;
                 sprite.userData._screenY = sy;
-                sprite.userData._distToCam = distToCam;
-
+                sprite.userData._distToCam = cam.position.distanceTo(sprite.position);
                 visible.push(sprite);
             });
 
-            // Sort: paling dekat kamera = prioritas (paling depan)
             visible.sort((a, b) => a.userData._distToCam - b.userData._distToCam);
 
-            // Tempat menyimpan label yang sudah ditampilkan
-            const kept = [];
+            const cellSize = radius;
+            const grid = new Map();
 
             visible.forEach(sprite => {
-                const sx = sprite.userData._screenX;
-                const sy = sprite.userData._screenY;
-
+                const cx = Math.floor(sprite.userData._screenX / cellSize);
+                const cy = Math.floor(sprite.userData._screenY / cellSize);
                 let collides = false;
-                for (const other of kept) {
-                    const ox = other.userData._screenX;
-                    const oy = other.userData._screenY;
-                    const d = Math.hypot(sx - ox, sy - oy);
-                    if (d < radius) {
-                        collides = true;
-                        break;
+
+                for (let dx = -1; dx <= 1 && !collides; dx++) {
+                    for (let dy = -1; dy <= 1 && !collides; dy++) {
+                        const key = `${cx + dx},${cy + dy}`;
+                        const bucket = grid.get(key);
+                        if (!bucket) continue;
+                        for (const other of bucket) {
+                            const d = Math.hypot(
+                                sprite.userData._screenX - other.userData._screenX,
+                                sprite.userData._screenY - other.userData._screenY
+                            );
+                            if (d < radius) { collides = true; break; }
+                        }
                     }
                 }
 
                 if (collides) {
-                    // Numpuk dengan yang lebih depan → sembunyikan
                     sprite.material.opacity = 0;
                     sprite.userData._hiddenByDeclutter = true;
                 } else {
-                    kept.push(sprite);
                     sprite.userData._hiddenByDeclutter = false;
-                    // Opacity akan di-set oleh updateTooltipScale
+                    const key = `${cx},${cy}`;
+                    if (!grid.has(key)) grid.set(key, []);
+                    grid.get(key).push(sprite);
                 }
             });
         }
@@ -1532,16 +1514,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
         window.filter3DBuildings = function (q) {
             const query = (q || '').toLowerCase().trim();
+            if (!query) {
+                pk.forEach(m => m.visible = true);
+                labelSprites.forEach(s => s.visible = true);
+                return;
+            }
             pk.forEach(m => {
                 const obj = m.userData.room;
                 if (!obj) return;
-                const match = !query || (obj.name || '').toLowerCase().includes(query);
+                const match = (obj.name || '').toLowerCase().includes(query);
                 m.visible = match;
             });
             labelSprites.forEach(sprite => {
                 const ref = sprite.userData.roomRef;
                 if (!ref) return;
-                const match = !query || (ref.name || '').toLowerCase().includes(query);
+                const match = (ref.name || '').toLowerCase().includes(query);
                 sprite.visible = match;
             });
         };

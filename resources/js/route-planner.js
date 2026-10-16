@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // GRID A*
     // ===========================================================
     function findRouteBetween(fromRoom, toRoom, api) {
-        const step = 0.35;
+        const step = 0.6;
         const minX = -37.5, maxX = 37.5, minZ = -20.5, maxZ = 20.5;
         const nx = Math.round((maxX - minX) / step) + 1;
         const nz = Math.round((maxZ - minZ) / step) + 1;
@@ -145,7 +145,8 @@ document.addEventListener('DOMContentLoaded', function () {
         let bestFallback = startId;
         let bestH = heuristic(startId);
 
-        while (heap.length && iterations++ < total * 3) {
+        const MAX_ITER = 40000;
+        while (heap.length && iterations++ < MAX_ITER) {
             const cur = pop();
             if (!cur) break;
             const current = cur[1];
@@ -241,8 +242,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     tryFill();
-    const retry = setInterval(() => { if (tryFill()) clearInterval(retry); }, 300);
-    setTimeout(() => clearInterval(retry), 30000);
+    let retryCount = 0;
+    const retry = setInterval(() => {
+        retryCount++;
+        if (tryFill() || retryCount > 20) clearInterval(retry);
+    }, 300);
     window.addEventListener('3d-ready', () => tryFill());
     document.querySelectorAll('.view-toggle-btn').forEach(b => {
         b.addEventListener('click', () => setTimeout(tryFill, 200));
@@ -546,78 +550,97 @@ document.addEventListener('DOMContentLoaded', function () {
     // ===========================================================
     // EVENT HANDLER — CARI RUTE
     // ===========================================================
-    btn.addEventListener('click', () => {
-        const fromId = fromSel.value;
-        const toId = toSel.value;
-        if (!fromId || !toId) { alert('Pilih ruangan awal dan tujuan dulu.'); return; }
-        if (fromId === toId) { alert('Ruangan awal dan tujuan sama.'); return; }
+    let routeRunning = false;
+    btn.addEventListener('click', async () => {
+        if (routeRunning) return;
+        routeRunning = true;
+        btn.disabled = true;
+        const originalHTML = btn.innerHTML;
+        btn.textContent = 'Mencari...';
+        try {
+            await new Promise(r => setTimeout(r, 0)); // yield ke UI
+            const fromId = fromSel.value;
+            const toId = toSel.value;
+            if (!fromId || !toId) { alert('Pilih ruangan awal dan tujuan dulu.'); return; }
+            if (fromId === toId) { alert('Ruangan awal dan tujuan sama.'); return; }
 
-        const api = window.__peta3D;
-        if (!api) { alert('Buka tab Model 3D dulu.'); return; }
+            const api = window.__peta3D;
+            if (!api) { alert('Buka tab Model 3D dulu.'); return; }
 
-        const list = api.roomsRegistry || [];
-        const fromEntry = list.find(o => o.room && String(o.room.id) === String(fromId));
-        const toEntry = list.find(o => o.room && String(o.room.id) === String(toId));
-        if (!fromEntry || !toEntry) { alert('Ruangan tidak ditemukan di 3D.'); return; }
+            const list = api.roomsRegistry || [];
+            const fromEntry = list.find(o => o.room && String(o.room.id) === String(fromId));
+            const toEntry = list.find(o => o.room && String(o.room.id) === String(toId));
+            if (!fromEntry || !toEntry) { alert('Ruangan tidak ditemukan di 3D.'); return; }
 
-        const fromFloor = getFloorFromRoom(fromEntry.room);
-        const toFloor = getFloorFromRoom(toEntry.room);
-        const diffFloor = fromFloor && toFloor && fromFloor !== toFloor;
+            const fromFloor = getFloorFromRoom(fromEntry.room);
+            const toFloor = getFloorFromRoom(toEntry.room);
+            const diffFloor = fromFloor && toFloor && fromFloor !== toFloor;
 
-        console.log(`[Route] ${fromEntry.room.name} (Lt.${fromFloor || '?'}) → ${toEntry.room.name} (Lt.${toFloor || '?'})`);
+            console.log(`[Route] ${fromEntry.room.name} (Lt.${fromFloor || '?'}) → ${toEntry.room.name} (Lt.${toFloor || '?'})`);
 
-        if (diffFloor) {
-            const stairs = api.stairsRegistry || [];
-            if (stairs.length === 0) {
-                alert(`Rute antar lantai (Lt. ${fromFloor} → Lt. ${toFloor}) membutuhkan data tangga.\n\nSilakan pilih ruangan di lantai yang sama.`);
+            if (diffFloor) {
+                const stairs = api.stairsRegistry || [];
+                if (stairs.length === 0) {
+                    alert(`Rute antar lantai (Lt. ${fromFloor} → Lt. ${toFloor}) membutuhkan data tangga.\n\nSilakan pilih ruangan di lantai yang sama.`);
+                    return;
+                }
+
+                const stairsFrom = findNearestStair(fromEntry, stairs);
+                const stairsTo = findNearestStair(toEntry, stairs);
+                if (!stairsFrom || !stairsTo) { alert('Tangga terdekat tidak ditemukan.'); return; }
+
+                const t0 = performance.now();
+                const path1 = findRouteBetween(fromEntry, stairsFrom, api) || [];
+                const path2 = findRouteBetween(stairsFrom, toEntry, api) || [];
+                const t1 = performance.now();
+
+                let combined = [...path1];
+                if (stairsFrom !== stairsTo) {
+                    const pathMid = findRouteBetween(stairsFrom, stairsTo, api) || [];
+                    combined = combined.concat(pathMid);
+                }
+                combined = combined.concat(path2);
+
+                console.log(`[Route] Antar-lantai: ${combined.length} titik, ${(t1 - t0).toFixed(1)}ms`);
+                if (combined.length < 2) { alert('Rute antar lantai tidak ditemukan.'); return; }
+
+                const fromFloorNum = parseInt(fromFloor, 10) || 1;
+                const toFloorNum = parseInt(toFloor, 10) || 1;
+                const direction = toFloorNum > fromFloorNum ? 'up' : 'down';
+                const stairPointWithDir = { ...stairsFrom, direction };
+
+                drawRoute(combined, stairPointWithDir);
+
+                if (panel && steps) {
+                    steps.innerHTML = buildSteps(combined, fromEntry.room.name, toEntry.room.name, true, fromFloor, toFloor);
+                    panel.classList.remove('hidden');
+                }
                 return;
             }
 
-            const stairsFrom = findNearestStair(fromEntry, stairs);
-            const stairsTo = findNearestStair(toEntry, stairs);
-            if (!stairsFrom || !stairsTo) { alert('Tangga terdekat tidak ditemukan.'); return; }
-
+            // Rute satu lantai
             const t0 = performance.now();
-            const path1 = findRouteBetween(fromEntry, stairsFrom, api) || [];
-            const path2 = findRouteBetween(stairsFrom, toEntry, api) || [];
-            const t1 = performance.now();
-
-            let combined = [...path1];
-            if (stairsFrom !== stairsTo) {
-                const pathMid = findRouteBetween(stairsFrom, stairsTo, api) || [];
-                combined = combined.concat(pathMid);
+            console.time('A* ' + fromEntry.room.name + ' → ' + toEntry.room.name);
+            const path = findRouteBetween(fromEntry, toEntry, api);
+            console.timeEnd('A* ' + fromEntry.room.name + ' → ' + toEntry.room.name);
+            if (path && path.length < 2) {
+                console.warn('[Route] Path tidak ditemukan untuk:', fromEntry.room.name, '→', toEntry.room.name);
             }
-            combined = combined.concat(path2);
+            const t1 = performance.now();
+            console.log(`[Route] A* ${(t1 - t0).toFixed(1)}ms, hasil:`, path ? path.length + ' titik' : 'GAGAL');
 
-            console.log(`[Route] Antar-lantai: ${combined.length} titik, ${(t1 - t0).toFixed(1)}ms`);
-            if (combined.length < 2) { alert('Rute antar lantai tidak ditemukan.'); return; }
+            if (!path || path.length < 2) { alert('Rute tidak ditemukan.'); return; }
 
-            const fromFloorNum = parseInt(fromFloor, 10) || 1;
-            const toFloorNum = parseInt(toFloor, 10) || 1;
-            const direction = toFloorNum > fromFloorNum ? 'up' : 'down';
-            const stairPointWithDir = { ...stairsFrom, direction };
-
-            drawRoute(combined, stairPointWithDir);
-
+            drawRoute(path);
             if (panel && steps) {
-                steps.innerHTML = buildSteps(combined, fromEntry.room.name, toEntry.room.name, true, fromFloor, toFloor);
+                steps.innerHTML = buildSteps(path, fromEntry.room.name, toEntry.room.name, false, fromFloor, toFloor);
                 panel.classList.remove('hidden');
             }
-            return;
-        }
-
-        // Rute satu lantai
-        const t0 = performance.now();
-        const path = findRouteBetween(fromEntry, toEntry, api);
-        const t1 = performance.now();
-        console.log(`[Route] A* ${(t1 - t0).toFixed(1)}ms, hasil:`, path ? path.length + ' titik' : 'GAGAL');
-
-        if (!path || path.length < 2) { alert('Rute tidak ditemukan.'); return; }
-
-        drawRoute(path);
-        if (panel && steps) {
-            steps.innerHTML = buildSteps(path, fromEntry.room.name, toEntry.room.name, false, fromFloor, toFloor);
-            panel.classList.remove('hidden');
+        } finally {
+            routeRunning = false;
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     });
 
