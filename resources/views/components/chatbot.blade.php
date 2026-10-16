@@ -19,7 +19,7 @@
         x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-150"
         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
         x-transition:leave-end="opacity-0 translate-y-4 scale-95" role="dialog" aria-label="{{ $title }}"
-        class="flex h-[560px] max-h-[calc(100vh-7.5rem)] w-[380px] max-w-[calc(100vw-2.5rem)] origin-bottom-right flex-col overflow-hidden rounded-[2rem] bg-[#5330AE] shadow-[0_20px_60px_rgba(40,20,100,0.4)] ring-1 ring-black/5 max-lg:max-h-[calc(100vh-9rem)] max-lg:mb-20">
+        class="flex h-[560px] max-h-[calc(100dvh-10rem)] w-[380px] max-w-[calc(100vw-2.5rem)] origin-bottom-right flex-col overflow-hidden rounded-[2rem] bg-[#5330AE] shadow-[0_20px_60px_rgba(40,20,100,0.4)] ring-1 ring-black/5">
 
         <!-- HEADER -->
         <header
