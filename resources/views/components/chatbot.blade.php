@@ -142,8 +142,7 @@
          Hidden di mobile — sudah ada di bottom nav
     ========================== -->
     <button type="button" @click="toggle()" :aria-expanded="isOpen" aria-label="Buka asisten AI"
-        class="relative h-16 w-16 shrink-0 transition-transform duration-200 hover:-translate-y-0.5 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 rounded-2xl
-               hidden lg:block">
+        class="relative h-16 w-16 shrink-0 transition-transform duration-200 hover:-translate-y-0.5 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 rounded-2xl">
 
         <!-- Ikon robot -->
         <span x-show="!isOpen" x-transition:enter="transition ease-out duration-200"

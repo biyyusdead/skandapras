@@ -645,7 +645,8 @@ class ChatbotController extends Controller
             }
 
             $list = $rooms->take(30)->map(function ($r) {
-                $line = "- {$r->name} ({$r->code}), lantai {$r->floor}, kapasitas {$r->capacity} orang, kondisi: {$r->condition->label()}";
+                $condLabel = $r->condition?->label() ?? 'Baik';
+                $line = "- {$r->name} ({$r->code}), lantai {$r->floor}, kapasitas {$r->capacity} orang, kondisi: {$condLabel}";
 
                 if ($r->panorama) {
                     $line .= ' [Tersedia Virtual Tour 360°]';
