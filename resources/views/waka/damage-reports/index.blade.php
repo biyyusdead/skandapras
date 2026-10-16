@@ -70,12 +70,26 @@
                                 <td class="px-4 py-3"><span class="text-xs font-mono text-surface-700">{{ $report->report_code }}</span></td>
                                 <td class="px-4 py-3 text-surface-700">{{ $report->room->name }}</td>
                                 <td class="px-4 py-3 text-surface-600">{{ $report->itemRoom?->item?->name ?? 'Ruangan (umum)' }}</td>
-                                <td class="px-4 py-3 text-surface-600 text-xs">{{ $report->reporter?->name ?? 'Pengunjung' }}</td>
+                                <td class="px-4 py-3">
+                                    <div class="flex flex-col">
+                                        <span class="text-xs font-medium text-surface-800">{{ $report->displayName() }}</span>
+                                        <span class="text-[10px] text-surface-500">{{ $report->reporter_type?->label() ?? 'Pengunjung' }}</span>
+                                    </div>
+                                </td>
                                 <td class="px-4 py-3 text-surface-500 text-xs">{{ $report->reported_at?->format('d M Y') }}</td>
-                                <td class="px-4 py-3"><x-ui.badge :color="$report->status->color()" :dot="true">{{ $report->status->label() }}</x-ui.badge></td>
+                                <td class="px-4 py-3">
+                                    <div class="flex flex-col gap-1 items-start">
+                                        <x-ui.badge :color="$report->status->color()" :dot="true" class="!text-[11px]">{{ $report->status->label() }}</x-ui.badge>
+                                        @if ($report->identity_status)
+                                            <span class="text-[10px] font-medium {{ $report->identity_status === \App\Enums\IdentityStatus::TERVERIFIKASI ? 'text-green-600' : 'text-amber-600' }}">
+                                                {{ $report->identity_status->label() }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center justify-end gap-1">
-                                        <x-ui.table-action :href="route('waka.damage-reports.show', $report)" icon="eye" title="Detail" />
+                                        <x-ui.table-action :href="route('waka.damage-reports.show', $report)" icon="eye" title="Detail & Verifikasi" />
                                     </div>
                                 </td>
                             </tr>

@@ -23,9 +23,9 @@ class Approval extends Model
     protected function casts(): array
     {
         return [
-            'status'         => ApprovalStatus::class,
+            'status' => ApprovalStatus::class,
             'approval_level' => 'integer',
-            'approved_at'    => 'datetime',
+            'approved_at' => 'datetime',
         ];
     }
 
@@ -42,8 +42,8 @@ class Approval extends Model
     public function levelLabel(): string
     {
         return match ($this->approval_level) {
-            1       => 'Waka Sarpras',
-            2       => 'Kepala Sekolah',
+            1 => 'Waka Sarpras',
+            2 => 'Kepala Sekolah',
             default => '-',
         };
     }

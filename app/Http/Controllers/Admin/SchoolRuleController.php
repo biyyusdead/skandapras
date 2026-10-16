@@ -8,12 +8,11 @@ use App\Traits\BulkActionable;
 use App\Traits\LogsActivity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class SchoolRuleController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function bulkAction(Request $request): RedirectResponse
     {
@@ -23,7 +22,7 @@ class SchoolRuleController extends Controller
             'rules',
             ['delete_files' => ['image']]
         );
-}
+    }
 
     public function index(Request $request): View
     {
@@ -45,9 +44,9 @@ class SchoolRuleController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'title'     => ['required', 'string', 'max:255'],
-            'content'   => ['nullable', 'string'],
-            'image'     => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:3072'],
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['nullable', 'string'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:3072'],
             'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
@@ -70,8 +69,8 @@ class SchoolRuleController extends Controller
     public function update(Request $request, SchoolRule $rule): RedirectResponse
     {
         $validated = $request->validate([
-            'title'     => ['required', 'string', 'max:255'],
-            'content'   => ['required', 'string'],
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string'],
             'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');

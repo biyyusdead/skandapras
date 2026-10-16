@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers\Pengguna;
 
+use App\Enums\DamageReportStatus;
+use App\Enums\IdentityStatus;
+use App\Enums\ReporterType;
 use App\Enums\UserRole;
+use App\Enums\ValidityStatus;
 use App\Helpers\NotificationHelper;
 use App\Http\Controllers\Controller;
 use App\Models\DamageReport;
-use App\Models\Item;
+use App\Models\ItemRoom;
 use App\Models\Room;
 use App\Traits\LogsActivity;
 use Illuminate\Http\RedirectResponse;
@@ -34,8 +38,8 @@ class DamageReportController extends Controller
             ->withQueryString();
 
         return view('pengguna.reports.index', [
-            'reports'  => $reports,
-            'statuses' => \App\Enums\DamageReportStatus::cases(),
+            'reports' => $reports,
+            'statuses' => DamageReportStatus::cases(),
         ]);
     }
 
@@ -49,9 +53,9 @@ class DamageReportController extends Controller
             ->with(['itemRooms.item:id,name,code,photo'])
             ->orderBy('name')
             ->get();
-        
+
         return view('pengguna.reports.create', [
-            'myRooms'        => $myRooms,
+            'myRooms' => $myRooms,
             'selectedRoomId' => $request->room_id,
             'selectedItemRoomId' => $request->item_room_id,
         ]);
@@ -63,24 +67,31 @@ class DamageReportController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'room_id'        => ['required', 'exists:rooms,id'],
-            'item_room_id'   => ['nullable', 'exists:item_rooms,id'],
-            'description'    => ['required', 'string', 'min:10', 'max:2000'],
+            'room_id' => ['required', 'exists:rooms,id'],
+            'item_room_id' => ['nullable', 'exists:item_rooms,id'],
+            'description' => ['required', 'string', 'min:10', 'max:2000'],
             'evidence_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
         ]);
 
         $room = Room::findOrFail($validated['room_id']);
         abort_unless($room->isOwnedBy(auth()->id()), 403, 'Anda tidak memiliki akses ke ruangan ini.');
 
-        if (!empty($validated['item_room_id'])) {
-            $itemRoom = \App\Models\ItemRoom::findOrFail($validated['item_room_id']);
+        if (! empty($validated['item_room_id'])) {
+            $itemRoom = ItemRoom::findOrFail($validated['item_room_id']);
             abort_unless($itemRoom->room_id == $room->id, 422, 'Barang tidak berada di ruangan yang dipilih.');
         }
 
-        $validated['reporter_id'] = auth()->id();
+        $user = auth()->user();
+        $validated['reporter_id'] = $user->id;
+        $validated['reporter_type'] = ReporterType::GURU_TENDIK;
+        $validated['reporter_name'] = $user->name;
+        $validated['reporter_phone'] = $user->phone;
+        $validated['identity_status'] = IdentityStatus::TERVERIFIKASI;
+        $validated['identity_note'] = 'Terverifikasi otomatis sebagai Pengguna Ruangan terdaftar: '.$user->name;
+        $validated['validity_status'] = ValidityStatus::MENUNGGU_PEMERIKSAAN;
         $validated['report_code'] = DamageReport::generateReportCode();
         $validated['reported_at'] = now();
-        $validated['status']      = 'menunggu_verifikasi';
+        $validated['status'] = DamageReportStatus::MENUNGGU_VERIFIKASI;
 
         if ($request->hasFile('evidence_photo')) {
             $validated['evidence_photo'] = handle_upload($request->file('evidence_photo'), 'damage-reports');

@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\Enums\UserRole;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Builder;
 
 class User extends Authenticatable
 {
@@ -31,9 +32,9 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'role'              => UserRole::class,
-            'is_active'         => 'boolean',
+            'password' => 'hashed',
+            'role' => UserRole::class,
+            'is_active' => 'boolean',
         ];
     }
 
@@ -44,7 +45,7 @@ class User extends Authenticatable
         return $this->hasMany(RoomUser::class);
     }
 
-    public function rooms(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function rooms(): BelongsToMany
     {
         return $this->belongsToMany(Room::class, 'room_users')
             ->withPivot('assigned_at')

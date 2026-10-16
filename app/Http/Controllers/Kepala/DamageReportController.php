@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Kepala;
 
+use App\Enums\DamageCategory;
 use App\Enums\DamageReportStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DamageReport;
@@ -14,6 +15,11 @@ class DamageReportController extends Controller
     {
         $reports = DamageReport::query()
             ->with(['room:id,name', 'reporter:id,name'])
+            ->where(function ($q) {
+                $q->where('damage_category', DamageCategory::BERAT)
+                    ->orWhere('status', DamageReportStatus::MENUNGGU_PERSETUJUAN_2)
+                    ->orWhereHas('approvals', fn ($aq) => $aq->where('approval_level', 2));
+            })
             ->when($request->search, fn ($q, $s) => $q->where('report_code', 'like', "%{$s}%"))
             ->when($request->status, fn ($q, $st) => $q->where('status', $st))
             ->latest()
@@ -21,7 +27,7 @@ class DamageReportController extends Controller
             ->withQueryString();
 
         return view('kepala.damage-reports.index', [
-            'reports'  => $reports,
+            'reports' => $reports,
             'statuses' => DamageReportStatus::cases(),
         ]);
     }

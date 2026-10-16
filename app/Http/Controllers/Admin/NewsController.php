@@ -8,12 +8,13 @@ use App\Traits\BulkActionable;
 use App\Traits\LogsActivity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class NewsController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function bulkAction(Request $request): RedirectResponse
     {
@@ -24,6 +25,7 @@ class NewsController extends Controller
             ['delete_files' => ['image']]
         );
     }
+
     public function index(Request $request): View
     {
         $news = News::with('author:id,name')
@@ -44,17 +46,15 @@ class NewsController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'title'        => ['required', 'string', 'max:255'],
-            'content'      => ['required', 'string'],
-            'image'        => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:3072'],
-            'status'       => ['required', 'in:draft,published'],
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:3072'],
+            'status' => ['required', 'in:draft,published'],
             'published_at' => ['nullable', 'date'],
         ]);
 
-        
-
         $validated['author_id'] = auth()->id();
-        $validated['slug']      = Str::slug($validated['title']) . '-' . Str::random(5);
+        $validated['slug'] = Str::slug($validated['title']).'-'.Str::random(5);
 
         $validated['published_at'] = $validated['published_at'] ?? now();
 
@@ -80,10 +80,10 @@ class NewsController extends Controller
     public function update(Request $request, News $news): RedirectResponse
     {
         $validated = $request->validate([
-            'title'        => ['required', 'string', 'max:255'],
-            'content'      => ['required', 'string'],
-            'image'        => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:3072'],
-            'status'       => ['required', 'in:draft,published'],
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:3072'],
+            'status' => ['required', 'in:draft,published'],
             'published_at' => ['nullable', 'date'],
         ]);
 
@@ -107,7 +107,7 @@ class NewsController extends Controller
     {
         $title = $news->title;
         if ($news->image) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($news->image);
+            Storage::disk('public')->delete($news->image);
         }
         $news->delete();
         $this->logActivity('delete', 'news', "Menghapus berita: {$title}");

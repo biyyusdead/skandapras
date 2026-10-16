@@ -29,12 +29,14 @@ class FeaturedProduct extends Model
     // app/Models/FeaturedProduct.php
     public function getImageUrlAttribute(): ?string
     {
-        if (!$this->image) return null;
+        if (! $this->image) {
+            return null;
+        }
 
         if (str_starts_with($this->image, 'http')) {
             return $this->image;
         }
 
-        return asset('storage/' . $this->image);
+        return asset('storage/'.$this->image);
     }
 }

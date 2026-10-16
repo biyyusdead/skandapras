@@ -8,12 +8,13 @@ use App\Traits\BulkActionable;
 use App\Traits\LogsActivity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class TeacherController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function index(Request $request): View
     {
@@ -37,13 +38,13 @@ class TeacherController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'nip'      => ['nullable', 'string', 'max:30', 'unique:teachers,nip'],
-            'email'    => ['nullable', 'email', 'max:255'],
-            'phone'    => ['nullable', 'string', 'max:20'],
+            'name' => ['required', 'string', 'max:255'],
+            'nip' => ['nullable', 'string', 'max:30', 'unique:teachers,nip'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20'],
             'position' => ['nullable', 'string', 'max:255'],
-            'photo'    => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'is_active'=> ['boolean'],
+            'photo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 
@@ -65,13 +66,13 @@ class TeacherController extends Controller
     public function update(Request $request, Teacher $teacher): RedirectResponse
     {
         $validated = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'nip'      => ['nullable', 'string', 'max:30', Rule::unique('teachers', 'nip')->ignore($teacher->id)],
-            'email'    => ['nullable', 'email', 'max:255'],
-            'phone'    => ['nullable', 'string', 'max:20'],
+            'name' => ['required', 'string', 'max:255'],
+            'nip' => ['nullable', 'string', 'max:30', Rule::unique('teachers', 'nip')->ignore($teacher->id)],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20'],
             'position' => ['nullable', 'string', 'max:255'],
-            'photo'    => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'is_active'=> ['boolean'],
+            'photo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 
@@ -89,7 +90,7 @@ class TeacherController extends Controller
     {
         $name = $teacher->name;
         if ($teacher->photo) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($teacher->photo);
+            Storage::disk('public')->delete($teacher->photo);
         }
         $teacher->delete();
         $this->logActivity('delete', 'teachers', "Menghapus guru: {$name}");
@@ -101,7 +102,7 @@ class TeacherController extends Controller
     {
         return $this->handleBulkAction(
             $request,
-            \App\Models\Teacher::class,
+            Teacher::class,
             'teachers',
             ['delete_files' => ['photo']]
         );

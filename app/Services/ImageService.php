@@ -5,9 +5,8 @@ namespace App\Services;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\Format;
+use Intervention\Image\ImageManager;
 
 class ImageService
 {
@@ -25,12 +24,11 @@ class ImageService
      * Process uploaded image → convert ke WebP + resize + compress.
      * Return path relatif dari storage public.
      *
-     * @param  UploadedFile  $file
-     * @param  string        $folder         Folder tujuan (mis. "news", "alumni")
-     * @param  int           $maxWidth       Max width untuk resize
-     * @param  int           $quality        WebP quality (0-100)
-     * @param  string|null   $oldPath        Path lama untuk dihapus
-     * @return string        Path file baru
+     * @param  string  $folder  Folder tujuan (mis. "news", "alumni")
+     * @param  int  $maxWidth  Max width untuk resize
+     * @param  int  $quality  WebP quality (0-100)
+     * @param  string|null  $oldPath  Path lama untuk dihapus
+     * @return string Path file baru
      */
     public static function upload(
         UploadedFile $file,
@@ -45,11 +43,11 @@ class ImageService
         }
 
         // Buat nama file unik dengan ekstensi .webp
-        $filename = Str::random(40) . '.webp';
+        $filename = Str::random(40).'.webp';
         $path = "{$folder}/{$filename}";
 
         // Init Intervention Image
-        $manager = new ImageManager(new Driver());
+        $manager = new ImageManager(new Driver);
         $image = $manager->read($file->getRealPath());
 
         // Resize kalau lebih besar dari maxWidth (jaga aspect ratio)
@@ -76,7 +74,7 @@ class ImageService
         int $quality = 75,
         ?string $oldPath = null
     ): string {
-        return self::upload($file, $folder . '/thumbs', $maxWidth, $quality, $oldPath);
+        return self::upload($file, $folder.'/thumbs', $maxWidth, $quality, $oldPath);
     }
 
     /**

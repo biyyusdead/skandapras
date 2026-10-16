@@ -21,8 +21,8 @@
         {{-- KIRI --}}
         <div class="lg:col-span-2 space-y-5">
 
-            {{-- Status --}}
-            <x-ui.card title="Status Laporan">
+            {{-- Status & Tiga Aspek --}}
+            <x-ui.card title="Status & Pemeriksaan">
                 <div class="flex items-center justify-between mb-4">
                     <x-ui.badge :color="$s->color()" :dot="true" class="!text-sm !px-3 !py-1">
                         {{ $s->label() }}
@@ -30,9 +30,45 @@
                     <span class="text-xs text-surface-500">{{ $report->reported_at?->format('d M Y H:i') }}</span>
                 </div>
 
+                {{-- Ringkasan 3 Aspek --}}
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-surface-50 rounded-lg border border-surface-200">
+                    <div>
+                        <p class="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">1. Identitas Pelapor</p>
+                        @if ($report->identity_status)
+                            <x-ui.badge :color="$report->identity_status->color()" :dot="true">{{ $report->identity_status->label() }}</x-ui.badge>
+                        @else
+                            <x-ui.badge color="gray" :dot="true">Belum Diverifikasi</x-ui.badge>
+                        @endif
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">2. Validitas Laporan</p>
+                        @if ($report->validity_status)
+                            <x-ui.badge :color="$report->validity_status->color()" :dot="true">{{ $report->validity_status->label() }}</x-ui.badge>
+                        @else
+                            <x-ui.badge color="gray" :dot="true">Menunggu Pemeriksaan</x-ui.badge>
+                        @endif
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">3. Kategori Kerusakan</p>
+                        @if ($report->damage_category)
+                            <x-ui.badge :color="$report->damage_category->color()" :dot="true">{{ $report->damage_category->label() }}</x-ui.badge>
+                        @else
+                            <x-ui.badge color="gray" :dot="true">Belum Ditentukan</x-ui.badge>
+                        @endif
+                    </div>
+                </div>
+
+                @if ($report->rejection_reason)
+                    <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p class="text-xs font-semibold text-red-700 mb-1">Alasan Penolakan:</p>
+                        <p class="text-xs text-red-600 leading-relaxed">{{ $report->rejection_reason }}</p>
+                    </div>
+                @endif
+
                 {{-- Approval Progress --}}
                 @if ($report->approvals->isNotEmpty())
                     <div class="mt-4 pt-4 border-t border-surface-100 space-y-3">
+                        <p class="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-2">Riwayat Keputusan & Persetujuan</p>
                         @foreach ($report->approvals as $approval)
                             <div class="flex items-start gap-3">
                                 <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0
@@ -56,41 +92,79 @@
                 @endif
             </x-ui.card>
 
+            {{-- Identitas & Pelapor --}}
+            <x-ui.card title="Identitas Pelapor">
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Nama Lengkap</dt>
+                        <dd class="text-sm font-semibold text-surface-800">{{ $report->displayName() }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Status / Tipe</dt>
+                        <dd class="text-sm text-surface-800">
+                            {{ $report->reporter_type?->label() ?? ($report->reporter ? 'Akun Terdaftar' : 'Pengunjung Umum') }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Kontak (Disamarkan)</dt>
+                        <dd class="text-sm font-mono text-surface-700">{{ $report->maskedPhone() }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Nomor Identitas (Disamarkan)</dt>
+                        <dd class="text-sm font-mono text-surface-700">{{ $report->maskedIdentifier() }}</dd>
+                    </div>
+                    @if ($report->student_class || $report->student_major)
+                        <div class="sm:col-span-2">
+                            <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Kelas & Jurusan</dt>
+                            <dd class="text-sm text-surface-800">{{ $report->student_class }} - {{ $report->student_major }}</dd>
+                        </div>
+                    @endif
+                    @if ($report->identity_note)
+                        <div class="sm:col-span-2 p-3 bg-surface-50 border border-surface-200 rounded-lg">
+                            <dt class="text-xs font-semibold text-surface-600 mb-1">Catatan Identitas Waka</dt>
+                            <dd class="text-xs text-surface-700 italic">"{{ $report->identity_note }}"</dd>
+                        </div>
+                    @endif
+                </dl>
+            </x-ui.card>
+
             {{-- Detail Kerusakan --}}
             <x-ui.card title="Detail Kerusakan">
                 <dl class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Ruangan</dt>
+                            <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Ruangan / Lokasi</dt>
                             <dd class="text-sm text-surface-800">{{ $report->room->name }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Pelapor</dt>
-                            <dd class="text-sm text-surface-800">{{ $report->reporter?->name ?? 'Pengunjung' }}</dd>
+                            <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Objek Kerusakan</dt>
+                            <dd class="text-sm text-surface-800">{{ $report->itemRoom?->item?->name ?? 'Fasilitas Ruangan (Umum)' }}</dd>
                         </div>
                     </div>
                     <div>
-                        <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Objek Kerusakan</dt>
-                        <dd class="text-sm text-surface-800">{{ $report->itemRoom?->item?->name ?? 'Ruangan (umum)' }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Deskripsi</dt>
+                        <dt class="text-xs font-medium text-surface-500 uppercase tracking-wide mb-1">Deskripsi Kerusakan</dt>
                         <dd class="text-sm text-surface-700 leading-relaxed whitespace-pre-line">{{ $report->description }}</dd>
                     </div>
+                    @if ($report->category_note)
+                        <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <dt class="text-xs font-semibold text-amber-800 mb-1">Alasan Penentuan Kategori Kerusakan Besar:</dt>
+                            <dd class="text-xs text-amber-700 leading-relaxed">{{ $report->category_note }}</dd>
+                        </div>
+                    @endif
                 </dl>
             </x-ui.card>
 
             {{-- Foto Bukti --}}
             @if ($report->evidence_photo)
                 <x-ui.card title="Foto Bukti">
-                    <img src="{{ asset('storage/' . $report->evidence_photo) }}" alt="Bukti"
-                         class="rounded-lg w-full max-w-md">
+                    <img src="{{ asset('storage/' . $report->evidence_photo) }}" alt="Bukti Kerusakan"
+                         class="rounded-lg w-full max-w-md border border-surface-200">
                 </x-ui.card>
             @endif
 
-            {{-- Catatan Verifikasi --}}
+            {{-- Catatan Verifikasi Waka --}}
             @if ($report->verification_note)
-                <x-ui.card title="Catatan Verifikasi">
+                <x-ui.card title="Catatan Verifikasi Waka Sarpras">
                     <p class="text-sm text-surface-700 leading-relaxed">{{ $report->verification_note }}</p>
                     @if ($report->verifier)
                         <p class="text-xs text-surface-400 mt-2">
@@ -170,11 +244,21 @@
             @endif
 
             {{-- Info --}}
-            <x-ui.card title="Info">
+            <x-ui.card title="Info Ringkas">
                 <dl class="space-y-3 text-sm">
                     <div>
                         <dt class="text-xs text-surface-500 mb-0.5">Kode Laporan</dt>
-                        <dd class="font-mono text-surface-800">{{ $report->report_code }}</dd>
+                        <dd class="font-mono text-surface-800 font-semibold">{{ $report->report_code }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-surface-500 mb-0.5">Kategori Kerusakan</dt>
+                        <dd>
+                            @if ($report->damage_category)
+                                <x-ui.badge :color="$report->damage_category->color()" :dot="true">{{ $report->damage_category->label() }}</x-ui.badge>
+                            @else
+                                <span class="text-surface-500 text-xs">Belum Ditentukan</span>
+                            @endif
+                        </dd>
                     </div>
                     <div>
                         <dt class="text-xs text-surface-500 mb-0.5">Ruangan</dt>
@@ -182,7 +266,8 @@
                     </div>
                     <div>
                         <dt class="text-xs text-surface-500 mb-0.5">Pelapor</dt>
-                        <dd class="text-surface-800">{{ $report->reporter?->name ?? 'Pengunjung' }}</dd>
+                        <dd class="text-surface-800">{{ $report->displayName() }}</dd>
+                        <dd class="text-xs text-surface-500">{{ $report->reporter_type?->label() ?? 'Umum' }}</dd>
                     </div>
                     <div>
                         <dt class="text-xs text-surface-500 mb-0.5">Tanggal Laporan</dt>

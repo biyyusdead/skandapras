@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Route;
 
 class HeroMenu extends Model
 {
@@ -36,7 +37,7 @@ class HeroMenu extends Model
      */
     public function getUrlAttribute(): string
     {
-        return \Illuminate\Support\Facades\Route::has($this->route_name)
+        return Route::has($this->route_name)
             ? route($this->route_name)
             : '#';
     }

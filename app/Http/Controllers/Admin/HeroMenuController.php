@@ -16,6 +16,7 @@ class HeroMenuController extends Controller
     public function index(): View
     {
         $heroMenus = HeroMenu::orderBy('order')->paginate(15);
+
         return view('admin.hero-menus.index', compact('heroMenus'));
     }
 
@@ -66,16 +67,16 @@ class HeroMenuController extends Controller
     protected function validateData(Request $request): array
     {
         return $request->validate([
-            'label'       => ['required', 'string', 'max:50'],
-            'title'       => ['required', 'string', 'max:100'],
+            'label' => ['required', 'string', 'max:50'],
+            'title' => ['required', 'string', 'max:100'],
             'description' => ['required', 'string', 'max:200'],
-            'icon'        => ['required', 'string', 'max:50'],
-            'route_name'  => ['required', 'string', 'max:100'],
-            'color_from'  => ['required', 'string', 'max:30'],
-            'color_to'    => ['required', 'string', 'max:30'],
-            'pattern'     => ['required', 'in:dots,grid,stripes,waves,cross'],
-            'order'       => ['nullable', 'integer', 'min:0'],
-            'is_active'   => ['boolean'],
+            'icon' => ['required', 'string', 'max:50'],
+            'route_name' => ['required', 'string', 'max:100'],
+            'color_from' => ['required', 'string', 'max:30'],
+            'color_to' => ['required', 'string', 'max:30'],
+            'pattern' => ['required', 'in:dots,grid,stripes,waves,cross'],
+            'order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['boolean'],
         ]);
     }
 }

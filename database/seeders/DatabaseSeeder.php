@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             ItemSeeder::class,
             // RoomSeeder::class,     // ← kalau ada
-            ItemRoomSeeder::class
+            ItemRoomSeeder::class,
         ]);
     }
 }

@@ -34,7 +34,7 @@ class SarprasSeeder extends Seeder
         foreach ($rooms as $r) {
             Room::updateOrCreate(['code' => $r['code']], array_merge($r, [
                 'health_score' => 100,
-                'is_active'    => true,
+                'is_active' => true,
             ]));
         }
 
@@ -43,17 +43,17 @@ class SarprasSeeder extends Seeder
             ['name' => 'Papan Tulis Putih', 'code' => 'PT-120', 'category' => 'ATK',        'brand' => 'Sakura'],
             ['name' => 'Kursi Lipat',       'code' => 'KR-LIP', 'category' => 'Furnitur',   'brand' => 'Chitose'],
             ['name' => 'AC 1PK',            'code' => 'AC-1PK', 'category' => 'Elektronik', 'brand' => 'Daikin'],
-            ['name' => 'Proyektor',         'code' => 'PRY-001','category' => 'Elektronik', 'brand' => 'Epson'],
+            ['name' => 'Proyektor',         'code' => 'PRY-001', 'category' => 'Elektronik', 'brand' => 'Epson'],
         ];
         foreach ($items as $it) {
             $cat = Category::where('name', $it['category'])->first();
             Item::updateOrCreate(
                 ['code' => $it['code']],
                 [
-                    'name'        => $it['name'],
+                    'name' => $it['name'],
                     'category_id' => $cat->id,
-                    'brand'       => $it['brand'],
-                    'is_active'   => true,
+                    'brand' => $it['brand'],
+                    'is_active' => true,
                 ]
             );
         }
@@ -85,7 +85,7 @@ class SarprasSeeder extends Seeder
                 ItemRoom::updateOrCreate(
                     ['item_id' => $item->id, 'room_id' => $room->id],
                     [
-                        'quantity'  => $d['qty'],
+                        'quantity' => $d['qty'],
                         'condition' => $d['condition'],
                     ]
                 );

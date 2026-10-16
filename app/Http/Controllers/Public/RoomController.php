@@ -87,14 +87,14 @@ class RoomController extends Controller
             ->orderBy('map_floor')
             ->pluck('map_floor');
 
-            $stats = Room::where('is_active', 1)
-                ->whereNotNull('map_x')
-                ->whereNotNull('map_y')
-                ->selectRaw('COUNT(*) as total')
-                ->selectRaw("SUM(CASE WHEN `condition` = 'baik' THEN 1 ELSE 0 END) as baik")
-                ->selectRaw("SUM(CASE WHEN `condition` = 'rusak_ringan' THEN 1 ELSE 0 END) as rusak_ringan")
-                ->selectRaw("SUM(CASE WHEN `condition` = 'rusak_berat' THEN 1 ELSE 0 END) as rusak_berat")
-                ->first();
+        $stats = Room::where('is_active', 1)
+            ->whereNotNull('map_x')
+            ->whereNotNull('map_y')
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("SUM(CASE WHEN `condition` = 'baik' THEN 1 ELSE 0 END) as baik")
+            ->selectRaw("SUM(CASE WHEN `condition` = 'rusak_ringan' THEN 1 ELSE 0 END) as rusak_ringan")
+            ->selectRaw("SUM(CASE WHEN `condition` = 'rusak_berat' THEN 1 ELSE 0 END) as rusak_berat")
+            ->first();
 
         return view('public.sarpras.peta', compact('rooms', 'roomsForJs', 'floors', 'floor', 'condition', 'stats'));
     }

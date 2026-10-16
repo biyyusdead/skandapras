@@ -21,45 +21,47 @@ class ConvertImagesToWebp extends Command
     protected $signature = 'images:convert-webp
                             {--model= : Model spesifik (opsional, mis. news)}
                             {--dry-run : Preview saja, tidak eksekusi}';
+
     protected $description = 'Convert semua gambar ke WebP + update database';
 
     /**
      * Daftar model + kolom gambar yang perlu di-convert.
      */
     protected array $targets = [
-        'achievement'     => ['model' => Achievement::class,      'columns' => ['image']],
-        'alumni'          => ['model' => Alumni::class,           'columns' => ['photo']],
-        'department'      => ['model' => Department::class,       'columns' => ['image']],
+        'achievement' => ['model' => Achievement::class,      'columns' => ['image']],
+        'alumni' => ['model' => Alumni::class,           'columns' => ['photo']],
+        'department' => ['model' => Department::class,       'columns' => ['image']],
         'extracurricular' => ['model' => Extracurricular::class,  'columns' => ['image']],
-        'product'         => ['model' => FeaturedProduct::class,  'columns' => ['image']],
-        'news'            => ['model' => News::class,             'columns' => ['image']],
-        'rule'            => ['model' => SchoolRule::class,       'columns' => ['image']],
-        'teacher'         => ['model' => Teacher::class,          'columns' => ['photo']],
-        'school'          => ['model' => SchoolProfile::class,    'columns' => ['logo', 'principal_photo', 'structure_image']],
+        'product' => ['model' => FeaturedProduct::class,  'columns' => ['image']],
+        'news' => ['model' => News::class,             'columns' => ['image']],
+        'rule' => ['model' => SchoolRule::class,       'columns' => ['image']],
+        'teacher' => ['model' => Teacher::class,          'columns' => ['photo']],
+        'school' => ['model' => SchoolProfile::class,    'columns' => ['logo', 'principal_photo', 'structure_image']],
     ];
 
     public function handle(): int
     {
-        $filter     = $this->option('model');
-        $dryRun     = $this->option('dry-run');
-        $disk       = Storage::disk('public');
+        $filter = $this->option('model');
+        $dryRun = $this->option('dry-run');
+        $disk = Storage::disk('public');
         $totalCount = 0;
-        $totalSkip  = 0;
-        $totalFail  = 0;
+        $totalSkip = 0;
+        $totalFail = 0;
 
         $targets = $filter
-            ? array_filter($this->targets, fn($k) => $k === $filter, ARRAY_FILTER_USE_KEY)
+            ? array_filter($this->targets, fn ($k) => $k === $filter, ARRAY_FILTER_USE_KEY)
             : $this->targets;
 
         if (empty($targets)) {
             $this->error("Model '{$filter}' tidak dikenal.");
-            $this->line('Model yang tersedia: ' . implode(', ', array_keys($this->targets)));
+            $this->line('Model yang tersedia: '.implode(', ', array_keys($this->targets)));
+
             return self::FAILURE;
         }
 
         foreach ($targets as $key => $config) {
             $this->info("\n📦 Memproses: {$key}");
-            $model  = $config['model'];
+            $model = $config['model'];
             $columns = $config['columns'];
 
             foreach ($columns as $column) {
@@ -76,30 +78,35 @@ class ConvertImagesToWebp extends Command
                     // Skip kalau bukan file lokal (URL eksternal) atau sudah webp
                     if (str_starts_with($path, 'http')) {
                         $totalSkip++;
+
                         continue;
                     }
 
                     $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
                     if ($ext === 'webp') {
                         $totalSkip++;
+
                         continue;
                     }
 
-                    if (!in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                    if (! in_array($ext, ['jpg', 'jpeg', 'png'])) {
                         $totalSkip++;
+
                         continue;
                     }
 
                     $fullPath = $disk->path($path);
-                    if (!file_exists($fullPath)) {
+                    if (! file_exists($fullPath)) {
                         $this->warn("    ✗ File tidak ditemukan: {$path}");
                         $totalFail++;
+
                         continue;
                     }
 
                     if ($dryRun) {
                         $this->line("    [DRY-RUN] {$path} → akan di-convert");
                         $totalCount++;
+
                         continue;
                     }
 
@@ -114,7 +121,7 @@ class ConvertImagesToWebp extends Command
                         );
 
                         $directory = dirname($path);
-                        $newPath   = ImageService::upload($uploadedFile, $directory);
+                        $newPath = ImageService::upload($uploadedFile, $directory);
 
                         // Hapus file lama
                         if ($disk->exists($path)) {
@@ -137,7 +144,7 @@ class ConvertImagesToWebp extends Command
         $this->newLine();
         if ($dryRun) {
             $this->info("🔍 DRY-RUN: {$totalCount} akan dikonvert, {$totalSkip} skip, {$totalFail} gagal");
-            $this->line("Jalankan tanpa --dry-run untuk eksekusi.");
+            $this->line('Jalankan tanpa --dry-run untuk eksekusi.');
         } else {
             $this->info("✅ Selesai: {$totalCount} converted, {$totalSkip} skip, {$totalFail} gagal");
         }

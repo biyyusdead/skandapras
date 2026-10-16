@@ -26,5 +26,5 @@ return new class extends Migration
         Schema::table('departments', function (Blueprint $table) {
             $table->dropColumn(['slug', 'icon', 'color', 'vision', 'mission', 'gallery']);
         });
-}
+    }
 };

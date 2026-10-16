@@ -2,12 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Achievement;
-use App\Models\News;
 use App\Models\Room;
 use App\Models\SchoolProfile;
-use App\Models\Teacher;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +19,7 @@ class PerformanceOptimizationTest extends TestCase
 
         SchoolProfile::create([
             'school_name' => 'SMK Negeri 2 Karanganyar',
-            'email'       => 'info@smkn2kra.sch.id',
+            'email' => 'info@smkn2kra.sch.id',
         ]);
 
         SchoolProfile::clearCurrentCache();
@@ -70,17 +66,17 @@ class PerformanceOptimizationTest extends TestCase
     public function test_sarpras_room_index_query_filtering(): void
     {
         Room::create([
-            'name'      => 'Lab Komputer 1',
-            'code'      => 'LAB-01',
-            'location'  => 'Lantai 2',
+            'name' => 'Lab Komputer 1',
+            'code' => 'LAB-01',
+            'location' => 'Lantai 2',
             'condition' => 'baik',
             'is_active' => true,
         ]);
 
         Room::create([
-            'name'      => 'Gudang Nonaktif',
-            'code'      => 'GDG-01',
-            'location'  => 'Lantai 1',
+            'name' => 'Gudang Nonaktif',
+            'code' => 'GDG-01',
+            'location' => 'Lantai 1',
             'condition' => 'rusak_berat',
             'is_active' => false,
         ]);
@@ -100,21 +96,21 @@ class PerformanceOptimizationTest extends TestCase
     public function test_sarpras_map_aggregation_query(): void
     {
         Room::create([
-            'name'      => 'Ruang Teori A',
-            'code'      => 'R-A',
+            'name' => 'Ruang Teori A',
+            'code' => 'R-A',
             'condition' => 'baik',
-            'map_x'     => 10.5,
-            'map_y'     => 20.5,
+            'map_x' => 10.5,
+            'map_y' => 20.5,
             'map_floor' => '1',
             'is_active' => true,
         ]);
 
         Room::create([
-            'name'      => 'Ruang Teori B',
-            'code'      => 'R-B',
+            'name' => 'Ruang Teori B',
+            'code' => 'R-B',
             'condition' => 'rusak_ringan',
-            'map_x'     => 15.0,
-            'map_y'     => 25.0,
+            'map_x' => 15.0,
+            'map_y' => 25.0,
             'map_floor' => '1',
             'is_active' => true,
         ]);

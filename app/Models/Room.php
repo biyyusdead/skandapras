@@ -31,18 +31,18 @@ class Room extends Model
     ];
 
     protected $casts = [
-        'condition'         => RoomCondition::class,
-        'is_active'         => 'boolean',
-        'health_score'      => 'integer',
-        'capacity'          => 'integer',
-        'map_x'             => 'float',
-        'map_y'             => 'float',
-        'model_3d_x'        => 'float',
-        'model_3d_y'        => 'float',
-        'model_3d_w'        => 'float',
-        'model_3d_h'        => 'float',
-        'model_3d_height'   => 'float',
-        'model_3d_visible'  => 'boolean',
+        'condition' => RoomCondition::class,
+        'is_active' => 'boolean',
+        'health_score' => 'integer',
+        'capacity' => 'integer',
+        'map_x' => 'float',
+        'map_y' => 'float',
+        'model_3d_x' => 'float',
+        'model_3d_y' => 'float',
+        'model_3d_w' => 'float',
+        'model_3d_h' => 'float',
+        'model_3d_height' => 'float',
+        'model_3d_visible' => 'boolean',
     ];
 
     protected $appends = ['photo_url', 'detail_url', 'report_url'];
@@ -87,7 +87,7 @@ class Room extends Model
             return 100;
         }
 
-        $totalWeight  = 0;
+        $totalWeight = 0;
         $earnedWeight = 0;
 
         foreach ($rows as $row) {
@@ -95,10 +95,10 @@ class Room extends Model
             $totalWeight += $q;
 
             $earnedWeight += match ($row->condition->value) {
-                'baik'         => $q,
+                'baik' => $q,
                 'rusak_ringan' => $q * 0.5,
-                'rusak_berat'  => 0,
-                default        => 0,
+                'rusak_berat' => 0,
+                default => 0,
             };
         }
 
@@ -128,7 +128,7 @@ class Room extends Model
 
     public function hasPanorama(): bool
     {
-        return !empty($this->panorama_file) || !empty($this->panorama_url);
+        return ! empty($this->panorama_file) || ! empty($this->panorama_url);
     }
 
     public function isOwnedBy(int $userId): bool
@@ -137,12 +137,12 @@ class Room extends Model
     }
 
     /**
- * URL panorama final — prioritas file upload, fallback ke URL manual.
-    */
+     * URL panorama final — prioritas file upload, fallback ke URL manual.
+     */
     public function getPanoramaAttribute(): ?string
     {
         if ($this->panorama_file) {
-            return asset('storage/' . $this->panorama_file);
+            return asset('storage/'.$this->panorama_file);
         }
 
         return $this->panorama_url ?: null;
@@ -150,7 +150,7 @@ class Room extends Model
 
     public function getPhotoUrlAttribute(): ?string
     {
-        return $this->photo ? asset('storage/' . $this->photo) : null;
+        return $this->photo ? asset('storage/'.$this->photo) : null;
     }
 
     public function getDetailUrlAttribute(): string

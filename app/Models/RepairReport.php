@@ -29,9 +29,9 @@ class RepairReport extends Model
     protected function casts(): array
     {
         return [
-            'status'       => RepairStatus::class,
-            'repair_cost'  => 'decimal:2',
-            'started_at'   => 'date',
+            'status' => RepairStatus::class,
+            'repair_cost' => 'decimal:2',
+            'started_at' => 'date',
             'completed_at' => 'date',
         ];
     }

@@ -25,7 +25,7 @@ class ItemRoom extends Model
     {
         return [
             'condition' => ItemCondition::class,
-            'quantity'  => 'integer',
+            'quantity' => 'integer',
         ];
     }
 

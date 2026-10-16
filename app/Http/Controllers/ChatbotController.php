@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Achievement;
 use App\Models\Admission;
+use App\Models\ChatbotUsage;
 use App\Models\Department;
 use App\Models\Extracurricular;
 use App\Models\FeaturedProduct;
@@ -24,82 +25,259 @@ class ChatbotController extends Controller
 {
     public function chat(Request $request): JsonResponse
     {
+        $maxChars = (int) config('chatbot.tokens.max_message_chars', 1000);
+        $maxHistory = (int) config('chatbot.tokens.max_history_messages', 6);
+
         $data = $request->validate([
-            'message' => 'required|string|max:500',
-            'history' => 'nullable|array|max:20',
-            'history.*.role' => 'required|in:user,assistant',
-            'history.*.text' => 'required|string|max:4000',
+            'message' => ['required', 'string', 'min:2', 'max:'.$maxChars],
+            'history' => ['nullable', 'array', 'max:20'],
+            'history.*.role' => ['required', 'in:user,assistant'],
+            'history.*.text' => ['required', 'string', 'max:1000'],
+        ], [
+            'message.required' => 'Pesan tidak boleh kosong.',
+            'message.min' => 'Pesan minimal 2 karakter.',
+            'message.max' => "Pesan maksimal {$maxChars} karakter.",
         ]);
 
         $message = trim($data['message']);
-        $history = $this->cleanHistory($data['history'] ?? []);
+        $history = $this->cleanHistory($data['history'] ?? [], $maxHistory);
+        $userKey = $this->resolveUserKey($request);
+
+        // 1. Pencegahan Request Aktif Bersamaan (In-Flight Concurrency Lock)
+        $lockKey = 'chatbot_inflight:'.$userKey;
+        $lockSeconds = (int) config('chatbot.rate_limit.lock_seconds', 30);
+        if (! Cache::add($lockKey, true, now()->addSeconds($lockSeconds))) {
+            $this->recordUsage($request, $userKey, status: 'concurrent_rejected');
+
+            return response()->json([
+                'reply' => 'Permintaan Anda sebelumnya masih sedang diproses. Mohon tunggu beberapa detik sebelum mengirim pesan berikutnya.',
+            ], 429);
+        }
+
+        $startTime = microtime(true);
 
         try {
-            $reply = $this->askGemini($message, $history);
+            // 2. Caching Pertanyaan Umum (FAQ) untuk Efisiensi Token
+            $cacheEnabled = (bool) config('chatbot.cache.enabled', true);
+            $normalizedQuery = $this->normalizeQuestion($message);
+            $faqCacheKey = 'chatbot_faq:'.hash('sha256', $normalizedQuery);
+
+            if ($cacheEnabled && empty($history) && Cache::has($faqCacheKey)) {
+                $cachedReply = Cache::get($faqCacheKey);
+                $durationMs = (int) round((microtime(true) - $startTime) * 1000);
+
+                $this->recordUsage(
+                    $request,
+                    $userKey,
+                    status: 'cached',
+                    promptTokens: 0,
+                    completionTokens: 0,
+                    totalTokens: 0,
+                    responseTimeMs: $durationMs
+                );
+
+                return response()->json([
+                    'reply' => $cachedReply,
+                    'cached' => true,
+                ]);
+            }
+
+            // 3. Panggil AI Provider dengan Batas Token & Timeout
+            $aiResult = $this->askAiProvider($message, $history);
+            $durationMs = (int) round((microtime(true) - $startTime) * 1000);
+
+            // Simpan ke Cache jika pertanyaan umum mandiri (tanpa konteks history)
+            if ($cacheEnabled && empty($history) && ! empty($aiResult['reply'])) {
+                $ttl = (int) config('chatbot.cache.ttl', 3600);
+                Cache::put($faqCacheKey, $aiResult['reply'], now()->addSeconds($ttl));
+            }
+
+            // 4. Catat Penggunaan Token Aktual / Estimasi
+            $this->recordUsage(
+                $request,
+                $userKey,
+                status: 'success',
+                promptTokens: $aiResult['prompt_tokens'],
+                completionTokens: $aiResult['completion_tokens'],
+                totalTokens: $aiResult['total_tokens'],
+                isEstimated: $aiResult['is_estimated'],
+                responseTimeMs: $durationMs
+            );
+
+            return response()->json(['reply' => $aiResult['reply']]);
         } catch (\Throwable $e) {
-            Log::error('Chatbot Gemini error: '.$e->getMessage());
+            $durationMs = (int) round((microtime(true) - $startTime) * 1000);
+
+            // Catat kegagalan tanpa membocorkan kredensial
+            Log::warning('Chatbot AI Provider error: '.$e->getMessage(), [
+                'user_key' => $userKey,
+            ]);
+
+            $this->recordUsage(
+                $request,
+                $userKey,
+                status: 'error',
+                errorMessage: Str::limit($e->getMessage(), 250),
+                responseTimeMs: $durationMs
+            );
+
             $reply = $this->fallbackReply($message);
-        }
 
-        return response()->json(['reply' => $reply]);
+            return response()->json(['reply' => $reply]);
+        } finally {
+            // Selalu lepas kunci concurrent setelah selesai
+            Cache::forget($lockKey);
+        }
     }
 
-    /** History harus diawali 'user' (OpenAI format). */
-    protected function cleanHistory(array $history): array
+    /**
+     * Identifikasi identitas unik pengguna/sesi tanpa mempercayai payload frontend.
+     */
+    protected function resolveUserKey(Request $request): string
     {
-        while (! empty($history) && $history[0]['role'] !== 'user') {
-            array_shift($history);
+        if ($user = $request->user()) {
+            return 'user_'.$user->id;
         }
 
-        return array_values($history);
+        $sessionIdentifier = $request->hasSession() ? $request->session()->getId() : '';
+
+        return 'guest_'.sha1($request->ip().'|'.$sessionIdentifier.'|'.$request->userAgent());
     }
 
-    protected function askGemini(string $message, array $history): string
+    /**
+     * Normalisasi string pertanyaan untuk cache matching.
+     */
+    protected function normalizeQuestion(string $text): string
+    {
+        $clean = preg_replace('/[^\p{L}\p{N}\s]/u', '', mb_strtolower(trim($text)));
+
+        return preg_replace('/\s+/', ' ', $clean ?? '');
+    }
+
+    /**
+     * Filter & batasi riwayat agar tidak mengirim seluruh riwayat tanpa batas.
+     */
+    protected function cleanHistory(array $history, int $maxHistory = 6): array
+    {
+        // Hanya ambil sejumlah pesan terakhir
+        $sliced = array_slice($history, -$maxHistory);
+
+        while (! empty($sliced) && $sliced[0]['role'] !== 'user') {
+            array_shift($sliced);
+        }
+
+        return array_values($sliced);
+    }
+
+    /**
+     * Panggil AI Provider (Rindri / OpenAI Compatible) dengan proteksi token dan timeout.
+     */
+    protected function askAiProvider(string $message, array $history): array
     {
         $systemPrompt = $this->systemPrompt($message);
 
-        // Format pesan untuk OpenAI-compatible API
         $messages = [
             ['role' => 'system', 'content' => $systemPrompt],
         ];
 
-        // Tambahkan history
         foreach ($history as $h) {
             $messages[] = [
                 'role' => $h['role'] === 'assistant' ? 'assistant' : 'user',
-                'content' => $h['text'],
+                'content' => Str::limit($h['text'], 500),
             ];
         }
 
-        // Pesan user terakhir
         $messages[] = ['role' => 'user', 'content' => $message];
+
+        $apiKey = config('services.rindri.key') ?: config('services.qwen.key');
+        $baseUrl = config('services.rindri.base_url') ?: config('services.qwen.base_url');
+        $model = config('services.rindri.model') ?: config('services.qwen.model');
+
+        $maxTokens = (int) config('chatbot.tokens.max_output_tokens', 500);
+        $timeout = (int) config('chatbot.timeout', 20);
+        $connectTimeout = (int) config('chatbot.connect_timeout', 8);
 
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer '.config('services.rindri.key'),
+            'Authorization' => 'Bearer '.$apiKey,
         ])
-            ->connectTimeout(10)
-            ->timeout(90)
+            ->connectTimeout($connectTimeout)
+            ->timeout($timeout)
             ->post(
-                rtrim(config('services.rindri.base_url'), '/').'/chat/completions',
+                rtrim($baseUrl, '/').'/chat/completions',
                 [
-                    'model' => config('services.rindri.model'),
+                    'model' => $model,
                     'messages' => $messages,
                     'temperature' => 0.3,
-                    'max_tokens' => 1500,
+                    'max_tokens' => $maxTokens,
                 ]
             );
 
         if (! $response->successful()) {
-            Log::warning('Rindri gagal ('.$response->status().'): '.$response->body());
-            throw new \RuntimeException('Rindri API gagal: '.$response->status());
+            throw new \RuntimeException('AI Provider returned HTTP '.$response->status());
         }
 
-        $text = $response->json('choices.0.message.content', '');
+        $json = $response->json();
+        $replyText = trim($json['choices'][0]['message']['content'] ?? '');
 
-        return trim($text) !== ''
-            ? trim($text)
-            : 'Maaf, saya belum bisa menjawab itu. Silakan coba pertanyaan lain.';
+        // Hitung token aktual dari provider jika tersedia
+        $usage = $json['usage'] ?? [];
+        $isEstimated = empty($usage['total_tokens']);
+
+        $promptTokens = $usage['prompt_tokens'] ?? $this->estimateTokens($systemPrompt.$message);
+        $completionTokens = $usage['completion_tokens'] ?? $this->estimateTokens($replyText);
+        $totalTokens = $usage['total_tokens'] ?? ($promptTokens + $completionTokens);
+
+        return [
+            'reply' => $replyText !== '' ? $replyText : 'Maaf, saya belum bisa menjawab itu. Silakan coba pertanyaan lain.',
+            'prompt_tokens' => (int) $promptTokens,
+            'completion_tokens' => (int) $completionTokens,
+            'total_tokens' => (int) $totalTokens,
+            'is_estimated' => $isEstimated,
+        ];
+    }
+
+    /**
+     * Estimasi jumlah token berdasarkan panjang karakter teks (rata-rata 3.8 char/token untuk teks umum).
+     */
+    protected function estimateTokens(string $text): int
+    {
+        $len = mb_strlen($text);
+
+        return max(1, (int) ceil($len / 3.8));
+    }
+
+    /**
+     * Catat penggunaan token dan status request secara aman.
+     */
+    protected function recordUsage(
+        Request $request,
+        string $userKey,
+        string $status = 'success',
+        int $promptTokens = 0,
+        int $completionTokens = 0,
+        int $totalTokens = 0,
+        bool $isEstimated = false,
+        ?string $errorMessage = null,
+        ?int $responseTimeMs = null
+    ): void {
+        try {
+            ChatbotUsage::create([
+                'user_id' => $request->user()?->id,
+                'session_id' => $userKey,
+                'ip_address' => $request->ip(),
+                'prompt_tokens' => $promptTokens,
+                'completion_tokens' => $completionTokens,
+                'total_tokens' => $totalTokens,
+                'is_estimated' => $isEstimated,
+                'status' => $status,
+                'error_message' => $errorMessage,
+                'response_time_ms' => $responseTimeMs,
+            ]);
+        } catch (\Throwable $e) {
+            // Pencatatan statistik tidak boleh mengganggu respons utama chatbot
+            Log::error('Gagal mencatat chatbot usage: '.$e->getMessage());
+        }
     }
 
     protected function systemPrompt(string $message): string

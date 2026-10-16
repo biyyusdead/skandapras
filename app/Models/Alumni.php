@@ -34,21 +34,21 @@ class Alumni extends Model
      * Auto-generate slug dari name kalau slug belum diisi.
      */
     protected static function booted(): void
-{
-    static::creating(function (self $alumni) {
-        if (empty($alumni->slug)) {
-            $alumni->slug = static::generateUniqueSlug($alumni->name);
-        }
-    });
+    {
+        static::creating(function (self $alumni) {
+            if (empty($alumni->slug)) {
+                $alumni->slug = static::generateUniqueSlug($alumni->name);
+            }
+        });
 
-    static::updating(function (self $alumni) {
-        // Kalau nama berubah, slug juga ikut berubah
-        // (kecuali slug diubah manual lewat form)
-        if ($alumni->isDirty('name') && ! $alumni->isDirty('slug')) {
-            $alumni->slug = static::generateUniqueSlug($alumni->name);
-        }
-    });
-}
+        static::updating(function (self $alumni) {
+            // Kalau nama berubah, slug juga ikut berubah
+            // (kecuali slug diubah manual lewat form)
+            if ($alumni->isDirty('name') && ! $alumni->isDirty('slug')) {
+                $alumni->slug = static::generateUniqueSlug($alumni->name);
+            }
+        });
+    }
 
     public static function generateUniqueSlug(string $name): string
     {
@@ -57,7 +57,7 @@ class Alumni extends Model
         $i = 2;
 
         while (static::where('slug', $slug)->exists()) {
-            $slug = $base . '-' . $i;
+            $slug = $base.'-'.$i;
             $i++;
         }
 
@@ -77,6 +77,6 @@ class Alumni extends Model
      */
     public function getPhotoUrlAttribute(): ?string
     {
-        return $this->photo ? asset('storage/' . $this->photo) : null;
+        return $this->photo ? asset('storage/'.$this->photo) : null;
     }
 }

@@ -20,8 +20,8 @@ class NewsController extends Controller
                 $q->where(function ($q) use ($s, $searchBy) {
                     match ($searchBy) {
                         'penulis' => $q->whereHas('author', fn ($a) => $a->where('name', 'like', "%{$s}%")),
-                        'konten'  => $q->where('content', 'like', "%{$s}%"),
-                        default   => $q->where('title', 'like', "%{$s}%"),
+                        'konten' => $q->where('content', 'like', "%{$s}%"),
+                        default => $q->where('title', 'like', "%{$s}%"),
                     };
                 });
             })
@@ -30,7 +30,7 @@ class NewsController extends Controller
             ->withQueryString();
 
         return view('public.news.index', [
-            'news'     => $news,
+            'news' => $news,
             'searchBy' => $request->get('search_by', 'judul'),
         ]);
     }

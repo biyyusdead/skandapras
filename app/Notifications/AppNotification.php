@@ -25,11 +25,11 @@ class AppNotification extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'title'   => $this->title,
+            'title' => $this->title,
             'message' => $this->message,
-            'url'     => $this->url,
-            'icon'    => $this->icon,
-            'color'   => $this->color,
+            'url' => $this->url,
+            'icon' => $this->icon,
+            'color' => $this->color,
         ];
     }
 }

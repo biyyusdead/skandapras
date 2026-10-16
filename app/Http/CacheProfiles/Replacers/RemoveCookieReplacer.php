@@ -2,8 +2,8 @@
 
 namespace App\Http\CacheProfiles\Replacers;
 
-use Symfony\Component\HttpFoundation\Response;
 use Spatie\ResponseCache\Replacers\Replacer;
+use Symfony\Component\HttpFoundation\Response;
 
 class RemoveCookieReplacer implements Replacer
 {
@@ -14,7 +14,7 @@ class RemoveCookieReplacer implements Replacer
     public function prepareResponseToCache(Response $response): void
     {
         $response->headers->remove('Set-Cookie');
-        
+
         // Force Cache-Control public
         $response->headers->set('Cache-Control', 'public, max-age=300, s-maxage=600');
     }

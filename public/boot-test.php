@@ -1,4 +1,8 @@
 <?php
+
+use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Http\Request;
+
 $start = microtime(true);
 
 require __DIR__.'/../vendor/autoload.php';
@@ -11,12 +15,12 @@ $bootTime = round((microtime(true) - $start) * 1000, 2);
 echo "Bootstrap: {$bootTime}ms\n";
 
 $start = microtime(true);
-$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernelTime = round((microtime(true) - $start) * 1000, 2);
 echo "Kernel: {$kernelTime}ms\n";
 
 $start = microtime(true);
-$request = Illuminate\Http\Request::capture();
+$request = Request::capture();
 $requestTime = round((microtime(true) - $start) * 1000, 2);
 echo "Request: {$requestTime}ms\n";
 

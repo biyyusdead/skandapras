@@ -9,11 +9,11 @@ trait LogsActivity
     protected function logActivity(string $action, string $module, string $description): void
     {
         ActivityLog::create([
-            'user_id'     => auth()->id(),
-            'action'      => $action,
-            'module'      => $module,
+            'user_id' => auth()->id(),
+            'action' => $action,
+            'module' => $module,
             'description' => $description,
-            'ip_address'  => request()->ip(),
+            'ip_address' => request()->ip(),
         ]);
     }
 }

@@ -48,4 +48,20 @@ return [
         'model' => env('RINDRI_MODEL', 'claude-sonnet-4-5'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cloudflare Turnstile CAPTCHA & Bot Protection
+    |--------------------------------------------------------------------------
+    */
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        'verify_url' => env('TURNSTILE_VERIFY_URL', 'https://challenges.cloudflare.com/turnstile/v0/siteverify'),
+        'allowed_hostnames' => env('TURNSTILE_ALLOWED_HOSTNAMES')
+            ? array_filter(array_map('trim', explode(',', env('TURNSTILE_ALLOWED_HOSTNAMES'))))
+            : null,
+        'action' => env('TURNSTILE_ACTION', 'pengaduan_sarpras'),
+        'timeout' => (int) env('TURNSTILE_TIMEOUT', 5),
+    ],
+
 ];

@@ -18,7 +18,7 @@ use Illuminate\View\View;
 
 class ItemController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function bulkAction(Request $request): RedirectResponse
     {
@@ -28,7 +28,7 @@ class ItemController extends Controller
             'items',
             ['delete_files' => ['photo']]
         );
-}
+    }
 
     public function index(Request $request): View
     {
@@ -36,8 +36,8 @@ class ItemController extends Controller
             ->with(['category:id,name', 'itemRooms.room:id,name,code'])
             ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                 $q->where('name', 'like', "%{$s}%")
-                  ->orWhere('code', 'like', "%{$s}%")
-                  ->orWhere('brand', 'like', "%{$s}%");
+                    ->orWhere('code', 'like', "%{$s}%")
+                    ->orWhere('brand', 'like', "%{$s}%");
             }))
             ->when($request->category_id, fn ($q, $c) => $q->where('category_id', $c))
             ->when($request->room_id, fn ($q, $r) => $q->whereHas('itemRooms',
@@ -51,8 +51,8 @@ class ItemController extends Controller
             ->withQueryString();
 
         return view('waka.items.index', [
-            'items'      => $items,
-            'rooms'      => Room::active()->orderBy('name')->get(['id', 'name', 'code']),
+            'items' => $items,
+            'rooms' => Room::active()->orderBy('name')->get(['id', 'name', 'code']),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
             'conditions' => ItemCondition::cases(),
         ]);
@@ -62,7 +62,7 @@ class ItemController extends Controller
     {
         return view('waka.items.create', [
             'categories' => Category::orderBy('name')->get(['id', 'name']),
-            'rooms'      => Room::active()->orderBy('name')->get(['id', 'name', 'code']),
+            'rooms' => Room::active()->orderBy('name')->get(['id', 'name', 'code']),
             'conditions' => ItemCondition::cases(),
         ]);
     }
@@ -112,12 +112,12 @@ class ItemController extends Controller
             ->withQueryString();
 
         return view('waka.items.edit', [
-            'item'       => $item,
-            'itemRooms'  => $itemRooms,
+            'item' => $item,
+            'itemRooms' => $itemRooms,
             'categories' => Category::orderBy('name')->get(['id', 'name']),
-            'rooms'      => Room::active()->orderBy('name')->get(['id', 'name', 'code']),
+            'rooms' => Room::active()->orderBy('name')->get(['id', 'name', 'code']),
             'conditions' => ItemCondition::cases(),
-            'search'     => $search,
+            'search' => $search,
         ]);
     }
 
@@ -156,11 +156,13 @@ class ItemController extends Controller
 
     public function destroy(Item $item): RedirectResponse
     {
-        $name    = $item->name;
+        $name = $item->name;
         $roomIds = $item->itemRooms()->pluck('room_id')->toArray();
 
         DB::transaction(function () use ($item, $roomIds, $name) {
-            if ($item->photo) Storage::disk('public')->delete($item->photo);
+            if ($item->photo) {
+                Storage::disk('public')->delete($item->photo);
+            }
 
             $item->delete();
 
@@ -179,22 +181,22 @@ class ItemController extends Controller
     {
         return $request->validate([
             'category_id' => ['required', 'exists:categories,id'],
-            'name'        => ['required', 'string', 'max:255'],
-            'code'        => ['required', 'string', 'max:50',
-                              Rule::unique('items', 'code')->ignore($ignoreId)],
-            'brand'       => ['nullable', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:50',
+                Rule::unique('items', 'code')->ignore($ignoreId)],
+            'brand' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'photo'       => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'is_active'   => ['boolean'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'is_active' => ['boolean'],
 
-            'rooms'              => ['required', 'array', 'min:1'],
-            'rooms.*.room_id'    => ['required', 'exists:rooms,id', 'distinct'],
-            'rooms.*.quantity'   => ['required', 'integer', 'min:1'],
-            'rooms.*.condition'  => ['required', Rule::enum(ItemCondition::class)],
-            'rooms.*.notes'      => ['nullable', 'string', 'max:500'],
+            'rooms' => ['required', 'array', 'min:1'],
+            'rooms.*.room_id' => ['required', 'exists:rooms,id', 'distinct'],
+            'rooms.*.quantity' => ['required', 'integer', 'min:1'],
+            'rooms.*.condition' => ['required', Rule::enum(ItemCondition::class)],
+            'rooms.*.notes' => ['nullable', 'string', 'max:500'],
         ], [
             'rooms.required' => 'Minimal 1 ruangan harus diisi.',
-            'rooms.min'      => 'Minimal 1 ruangan harus diisi.',
+            'rooms.min' => 'Minimal 1 ruangan harus diisi.',
         ]);
     }
 
@@ -208,9 +210,9 @@ class ItemController extends Controller
             $item->itemRooms()->updateOrCreate(
                 ['room_id' => $row['room_id']],
                 [
-                    'quantity'  => $row['quantity'],
+                    'quantity' => $row['quantity'],
                     'condition' => $row['condition'],
-                    'notes'     => $row['notes'] ?? null,
+                    'notes' => $row['notes'] ?? null,
                 ]
             );
         }
@@ -218,7 +220,9 @@ class ItemController extends Controller
 
     protected function recalculateRooms(array $roomIds): void
     {
-        if (empty($roomIds)) return;
+        if (empty($roomIds)) {
+            return;
+        }
 
         Room::whereIn('id', $roomIds)->get()->each(function ($room) {
             $room->update(['health_score' => $room->recalculateHealthScore()]);

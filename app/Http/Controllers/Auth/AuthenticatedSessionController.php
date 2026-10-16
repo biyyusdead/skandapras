@@ -30,11 +30,11 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         ActivityLog::create([
-            'user_id'     => Auth::id(),
-            'action'      => 'login',
-            'module'      => 'auth',
+            'user_id' => Auth::id(),
+            'action' => 'login',
+            'module' => 'auth',
             'description' => 'User login ke sistem',
-            'ip_address'  => $request->ip(),
+            'ip_address' => $request->ip(),
         ]);
 
         // Set flag welcome popup — muncul sekali setelah login
@@ -51,11 +51,11 @@ class AuthenticatedSessionController extends Controller
         // Catat activity log sebelum logout
         if (Auth::check()) {
             ActivityLog::create([
-                'user_id'     => Auth::id(),
-                'action'      => 'logout',
-                'module'      => 'auth',
+                'user_id' => Auth::id(),
+                'action' => 'logout',
+                'module' => 'auth',
                 'description' => 'User logout dari sistem',
-                'ip_address'  => $request->ip(),
+                'ip_address' => $request->ip(),
             ]);
         }
 
@@ -73,11 +73,11 @@ class AuthenticatedSessionController extends Controller
     protected function redirectPath(User $user): string
     {
         return match ($user->role->value) {
-            'admin'            => route('admin.dashboard'),
-            'waka_sarpras'     => route('waka.dashboard'),
-            'kepala_sekolah'   => route('kepala.dashboard'),
+            'admin' => route('admin.dashboard'),
+            'waka_sarpras' => route('waka.dashboard'),
+            'kepala_sekolah' => route('kepala.dashboard'),
             'pengguna_ruangan' => route('pengguna.dashboard'),
-            default            => '/',
+            default => '/',
         };
     }
 }

@@ -51,14 +51,16 @@ class News extends Model
     {
         static::creating(function (News $news) {
             if (empty($news->slug)) {
-                $news->slug = Str::slug($news->title) . '-' . Str::random(5);
+                $news->slug = Str::slug($news->title).'-'.Str::random(5);
             }
         });
     }
 
     public function getImageUrlAttribute(): ?string
     {
-        if (!$this->image) return null;
+        if (! $this->image) {
+            return null;
+        }
 
         // Kalau URL full (http/https), langsung pakai
         if (str_starts_with($this->image, 'http')) {
@@ -66,6 +68,6 @@ class News extends Model
         }
 
         // Kalau path lokal, pakai asset storage
-        return asset('storage/' . $this->image);
+        return asset('storage/'.$this->image);
     }
 }

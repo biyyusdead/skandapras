@@ -2,6 +2,10 @@
 
 @section('title', 'Formulir Pengaduan')
 
+@push('scripts')
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+@endpush
+
 @section('content')
 
     <style>[x-cloak]{display:none !important}</style>
@@ -132,8 +136,167 @@
                 {{-- BODY --}}
                 <div class="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-6 sm:px-16 sm:pb-8 sm:pt-8">
 
-                    {{-- STEPPER --}}
-                    <div x-show="!sent">
+                    {{-- 1. PILIHAN JENIS PELAPOR DI AWAL (SEBELUM FORMULIR RESMI DITAMPILKAN) --}}
+                    <div x-show="!sent && !roleChosen" class="py-2 space-y-6">
+                        <div class="text-center max-w-md mx-auto">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-100 text-[#6C4AB6] text-xs font-semibold mb-2">
+                                <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+                                Identifikasi Pelapor
+                            </span>
+                            <h3 class="text-lg sm:text-xl font-bold text-slate-900">Pilih Jenis Pelapor</h3>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                                Silakan pilih status Anda sebelum mengisi pengaduan sarana &amp; prasarana sekolah.
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+                            {{-- Pilihan 1: Siswa --}}
+                            <button type="button" @click="selectRole('siswa')"
+                                    class="group relative flex flex-col items-center text-center p-5 rounded-2xl border-2 border-slate-200 bg-white hover:border-[#6C4AB6] hover:bg-violet-50/50 hover:shadow-lg transition-all duration-200">
+                                <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 text-[#6C4AB6] group-hover:scale-110 transition-transform mb-3">
+                                    <i data-lucide="graduation-cap" class="w-7 h-7"></i>
+                                </span>
+                                <span class="text-sm font-bold text-slate-900 group-hover:text-[#6C4AB6]">Siswa</span>
+                                <span class="text-[11px] text-slate-500 mt-1 leading-snug">Peserta didik aktif SMK Negeri 2 Karanganyar</span>
+                                <span class="mt-3 inline-flex items-center gap-1 text-[10px] font-semibold text-[#6C4AB6] bg-violet-100/70 px-2.5 py-0.5 rounded-full">
+                                    Formulir Resmi
+                                </span>
+                            </button>
+
+                            {{-- Pilihan 2: Guru / Tenaga Kependidikan --}}
+                            <button type="button" @click="selectRole('guru_tendik')"
+                                    class="group relative flex flex-col items-center text-center p-5 rounded-2xl border-2 border-slate-200 bg-white hover:border-[#6C4AB6] hover:bg-violet-50/50 hover:shadow-lg transition-all duration-200">
+                                <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-100 text-purple-700 group-hover:scale-110 transition-transform mb-3">
+                                    <i data-lucide="badge-check" class="w-7 h-7"></i>
+                                </span>
+                                <span class="text-sm font-bold text-slate-900 group-hover:text-purple-700">Guru / Tendik</span>
+                                <span class="text-[11px] text-slate-500 mt-1 leading-snug">Pendidik &amp; staf sekolah terdaftar</span>
+                                <span class="mt-3 inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 bg-purple-100/70 px-2.5 py-0.5 rounded-full">
+                                    Verifikasi NIP
+                                </span>
+                            </button>
+
+                            {{-- Pilihan 3: Pengunjung Umum --}}
+                            <button type="button" @click="selectRole('pengunjung')"
+                                    class="group relative flex flex-col items-center text-center p-5 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50 hover:shadow-lg transition-all duration-200">
+                                <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 group-hover:scale-110 transition-transform mb-3">
+                                    <i data-lucide="users" class="w-7 h-7"></i>
+                                </span>
+                                <span class="text-sm font-bold text-slate-900">Pengunjung Umum</span>
+                                <span class="text-[11px] text-slate-500 mt-1 leading-snug">Tamu, wali murid, atau umum</span>
+                                <span class="mt-3 inline-flex items-center gap-1 text-[10px] font-semibold text-slate-700 bg-slate-200 px-2.5 py-0.5 rounded-full">
+                                    Kontak Petugas
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- 2. TAMPILAN ARAHAN UNTUK PENGUNJUNG UMUM (TANPA FORMULIR RESMI) --}}
+                    <div x-show="!sent && roleChosen && form.reporter_type === 'pengunjung'" x-cloak class="py-2 space-y-5">
+                        <div class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50/90 to-purple-50/50 p-5 text-slate-700 space-y-3 shadow-sm">
+                            <div class="flex items-start gap-3.5">
+                                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#6C4AB6]/10 text-[#6C4AB6] ring-1 ring-[#6C4AB6]/20">
+                                    <i data-lucide="info" class="w-6 h-6"></i>
+                                </span>
+                                <div class="min-w-0">
+                                    <h4 class="text-sm sm:text-base font-bold text-slate-900">Informasi Pelaporan untuk Pengunjung Umum</h4>
+                                    <p class="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                                        Terima kasih atas kepedulian Anda terhadap fasilitas sekolah. Formulir pengaduan resmi SKANDAPRAS ditujukan untuk warga sekolah. Jika Anda merupakan pengunjung umum dan ingin melaporkan kerusakan fasilitas, silakan sampaikan laporan kepada petugas sekolah atau bagian Tata Usaha.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Area Informasi Kontak Petugas Sekolah --}}
+                        <div class="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-sm">
+                            <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                                <i data-lucide="phone-call" class="w-4 h-4 text-[#6C4AB6]"></i>
+                                <h5 class="text-xs font-bold uppercase tracking-wider text-slate-700">Kontak Resmi &amp; Lokasi Layanan Sekolah</h5>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-600">
+                                {{-- Bagian Tata Usaha --}}
+                                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
+                                    <div class="flex items-center gap-2 text-slate-900 font-bold">
+                                        <i data-lucide="building-2" class="w-4 h-4 text-[#6C4AB6]"></i>
+                                        <span>Bagian Tata Usaha (TU)</span>
+                                    </div>
+                                    <p class="text-slate-600 leading-relaxed">{{ $officerContact['tu_location'] ?? 'Ruang Tata Usaha (Gedung Utama SMK Negeri 2 Karanganyar)' }}</p>
+                                    <p class="text-[11px] text-slate-500 font-medium">Jam Pelayanan: {{ $officerContact['service_hours'] ?? 'Senin - Jumat, pukul 07:00 - 15:30 WIB' }}</p>
+                                </div>
+
+                                {{-- Kontak Resmi Sekolah --}}
+                                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5">
+                                    <div class="flex items-center gap-2 text-slate-900 font-bold">
+                                        <i data-lucide="landmark" class="w-4 h-4 text-[#6C4AB6]"></i>
+                                        <span>Saluran Resmi Sekolah</span>
+                                    </div>
+                                    @if (!empty($schoolProfile?->phone))
+                                        <p class="flex items-center gap-1.5 text-slate-700">
+                                            <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400"></i>
+                                            <span>Telepon: <strong>{{ $schoolProfile->phone }}</strong></span>
+                                        </p>
+                                    @endif
+                                    @if (!empty($schoolProfile?->email))
+                                        <p class="flex items-center gap-1.5 text-slate-700">
+                                            <i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400"></i>
+                                            <span>Email: <strong>{{ $schoolProfile->email }}</strong></span>
+                                        </p>
+                                    @endif
+                                    @if (!empty($schoolProfile?->address))
+                                        <p class="flex items-center gap-1.5 text-[11px] text-slate-500">
+                                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                                            <span>{{ $schoolProfile->address }}</span>
+                                        </p>
+                                    @endif
+                                </div>
+
+                                {{-- Kontak Langsung Petugas Sarpras (Config / Placeholder) --}}
+                                <div class="sm:col-span-2 p-3.5 rounded-xl bg-violet-50/50 border border-violet-100 space-y-1.5">
+                                    <div class="flex items-center gap-2 text-[#5B3BA5] font-bold">
+                                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                        <span>Kontak Petugas Sarpras</span>
+                                    </div>
+                                    @if (!empty($officerContact['phone']) || !empty($officerContact['whatsapp']) || !empty($officerContact['email']))
+                                        <div class="space-y-1 pt-1">
+                                            @if (!empty($officerContact['phone']))
+                                                <p class="text-slate-800">Telepon Petugas: <strong>{{ $officerContact['phone'] }}</strong></p>
+                                            @endif
+                                            @if (!empty($officerContact['whatsapp']))
+                                                <p class="text-slate-800">WhatsApp Petugas: <strong>{{ $officerContact['whatsapp'] }}</strong></p>
+                                            @endif
+                                            @if (!empty($officerContact['email']))
+                                                <p class="text-slate-800">Email Petugas: <strong>{{ $officerContact['email'] }}</strong></p>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <p class="text-slate-600 text-xs italic">
+                                            {{ $officerContact['placeholder_message'] ?? 'Kontak petugas akan tersedia setelah dikonfirmasi pihak sekolah.' }}
+                                        </p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Tombol Aksi Pengunjung --}}
+                        <div class="flex items-center justify-between gap-3 pt-2">
+                            <button type="button" @click="resetRole()"
+                                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-surface-200 bg-white hover:bg-surface-50 text-xs font-semibold text-surface-700 transition">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                                <span>Ganti Pilihan Jenis Pelapor</span>
+                            </button>
+
+                            <button type="button" @click="close()"
+                                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6C4AB6] to-[#5B3BA5] text-white text-xs font-semibold shadow hover:brightness-110 transition">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                                <span>Tutup</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- 3. STEPPER & FORMULIR PENGADUAN RESMI (UNTUK SISWA & GURU/TENDIK) --}}
+                    <div x-show="!sent && roleChosen && form.reporter_type !== 'pengunjung'">
+                        {{-- Stepper --}}
                         <div class="flex items-center">
                             @php
                                 $stepIcons = [
@@ -166,23 +329,121 @@
                         </div>
                     </div>
 
-                    {{-- FORM --}}
-                    <form x-ref="form" x-show="!sent" action="{{ route('public.sarpras.pengaduan.store') }}"
+                    {{-- FORMULIR PENGADUAN RESMI --}}
+                    <form x-ref="form" x-show="!sent && roleChosen && form.reporter_type !== 'pengunjung'" action="{{ route('public.sarpras.pengaduan.store') }}"
                           method="POST" enctype="multipart/form-data" class="mt-6 sm:mt-8" @submit.prevent="submit()">
                         @csrf
+                        <input type="hidden" name="reporter_type" :value="form.reporter_type">
 
                         {{-- STEP 1 --}}
                         <div x-show="step === 1" class="space-y-4">
-                            <div>
-                                <label class="mb-1.5 block text-[11px] font-semibold text-[#5B3BA5]">
-                                    Nama Lengkap <span class="text-red-500">*</span>
-                                </label>
-                                <input type="text" name="reporter_name" x-model="form.nama" autocomplete="name"
-                                       class="h-[42px] w-full rounded-[10px] border bg-white px-3 text-sm outline-none transition focus:border-[#6C4AB6] focus:ring-2 focus:ring-violet-200"
-                                       :class="errors.nama ? 'border-red-400' : 'border-slate-400'">
-                                <p x-show="errors.nama" x-text="errors.nama" class="mt-1 text-[11px] text-red-600"></p>
+                            {{-- Banner Status Pelapor Terpilih & Tombol Ganti --}}
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-violet-50/80 border border-violet-200">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#6C4AB6] text-white text-xs shadow-sm">
+                                        <i :data-lucide="form.reporter_type === 'siswa' ? 'graduation-cap' : 'badge-check'" class="w-4 h-4"></i>
+                                    </span>
+                                    <div>
+                                        <span class="text-xs font-bold text-slate-800" x-text="form.reporter_type === 'siswa' ? 'Formulir Resmi Siswa' : 'Formulir Resmi Guru / Tenaga Kependidikan'"></span>
+                                        <span class="text-[10px] text-slate-500 block" x-text="form.reporter_type === 'siswa' ? 'Data akan diverifikasi manual oleh Waka Sarpras' : 'NIP dicocokkan dengan data resmi sekolah'"></span>
+                                    </div>
+                                </div>
+                                <button type="button" @click="resetRole()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-violet-200 text-xs font-semibold text-[#6C4AB6] hover:bg-violet-100 transition shadow-sm">
+                                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                                    <span>Ganti Pilihan</span>
+                                </button>
                             </div>
 
+                            <p x-show="errors.reporter_type" x-text="errors.reporter_type" class="mt-1 text-[11px] text-red-600"></p>
+
+                            <div class="space-y-4">
+
+                            {{-- Nama Lengkap & Kontak --}}
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="mb-1.5 block text-[11px] font-semibold text-[#5B3BA5]">
+                                        Nama Lengkap <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" name="reporter_name" x-model="form.nama" autocomplete="name"
+                                           placeholder="Masukkan nama lengkap"
+                                           class="h-[42px] w-full rounded-[10px] border bg-white px-3 text-sm outline-none transition focus:border-[#6C4AB6] focus:ring-2 focus:ring-violet-200"
+                                           :class="errors.nama ? 'border-red-400' : 'border-slate-400'">
+                                    <p x-show="errors.nama" x-text="errors.nama" class="mt-1 text-[11px] text-red-600"></p>
+                                </div>
+
+                                <div>
+                                    <label class="mb-1.5 block text-[11px] font-semibold text-[#5B3BA5]">
+                                        Nomor Telepon / WhatsApp <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="tel" name="reporter_phone" x-model="form.phone" autocomplete="tel"
+                                           placeholder="Contoh: 08123456789"
+                                           class="h-[42px] w-full rounded-[10px] border bg-white px-3 text-sm outline-none transition focus:border-[#6C4AB6] focus:ring-2 focus:ring-violet-200"
+                                           :class="errors.phone ? 'border-red-400' : 'border-slate-400'">
+                                    <p x-show="errors.phone" x-text="errors.phone" class="mt-1 text-[11px] text-red-600"></p>
+                                </div>
+                            </div>
+
+                            {{-- Field Khusus Siswa --}}
+                            <div x-show="form.reporter_type === 'siswa'" x-cloak class="p-3.5 rounded-xl bg-violet-50/50 border border-violet-100 space-y-3">
+                                <div class="flex items-center gap-2 text-xs font-semibold text-[#5B3BA5]">
+                                    <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                                    <span>Identitas Siswa</span>
+                                    <span class="text-[10px] font-normal text-slate-500">(Akan diverifikasi manual)</span>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="mb-1 block text-[10px] font-semibold text-slate-700">
+                                            NIS / NISN <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" name="reporter_identifier" x-model="form.identifier"
+                                               placeholder="Contoh: 0051234567"
+                                               class="h-[38px] w-full rounded-lg border bg-white px-2.5 text-xs outline-none transition focus:border-[#6C4AB6] focus:ring-2 focus:ring-violet-200"
+                                               :class="errors.identifier ? 'border-red-400' : 'border-slate-300'">
+                                        <p x-show="errors.identifier" x-text="errors.identifier" class="mt-0.5 text-[10px] text-red-600"></p>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-[10px] font-semibold text-slate-700">
+                                            Kelas <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" name="student_class" x-model="form.student_class"
+                                               placeholder="Contoh: XII RPL 1"
+                                               class="h-[38px] w-full rounded-lg border bg-white px-2.5 text-xs outline-none transition focus:border-[#6C4AB6] focus:ring-2 focus:ring-violet-200"
+                                               :class="errors.student_class ? 'border-red-400' : 'border-slate-300'">
+                                        <p x-show="errors.student_class" x-text="errors.student_class" class="mt-0.5 text-[10px] text-red-600"></p>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-[10px] font-semibold text-slate-700">
+                                            Jurusan <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="text" name="student_major" x-model="form.student_major"
+                                               placeholder="Contoh: Rekayasa Perangkat Lunak"
+                                               class="h-[38px] w-full rounded-lg border bg-white px-2.5 text-xs outline-none transition focus:border-[#6C4AB6] focus:ring-2 focus:ring-violet-200"
+                                               :class="errors.student_major ? 'border-red-400' : 'border-slate-300'">
+                                        <p x-show="errors.student_major" x-text="errors.student_major" class="mt-0.5 text-[10px] text-red-600"></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Field Khusus Guru / Tendik --}}
+                            <div x-show="form.reporter_type === 'guru_tendik'" x-cloak class="p-3.5 rounded-xl bg-violet-50/50 border border-violet-100 space-y-2">
+                                <div class="flex items-center gap-2 text-xs font-semibold text-[#5B3BA5]">
+                                    <i data-lucide="badge-check" class="w-4 h-4"></i>
+                                    <span>Identitas Guru / Tenaga Kependidikan</span>
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-[10px] font-semibold text-slate-700">
+                                        NIP / NUPTK / No. Identitas Pegawai <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" name="reporter_identifier" x-model="form.identifier"
+                                           placeholder="Masukkan NIP atau nomor identitas resmi"
+                                           class="h-[38px] w-full rounded-lg border bg-white px-3 text-xs outline-none transition focus:border-[#6C4AB6] focus:ring-2 focus:ring-violet-200"
+                                           :class="errors.identifier ? 'border-red-400' : 'border-slate-300'">
+                                    <p class="mt-1 text-[10px] text-slate-500">NIP akan dicocokkan langsung dengan data guru resmi sekolah.</p>
+                                    <p x-show="errors.identifier" x-text="errors.identifier" class="mt-0.5 text-[10px] text-red-600"></p>
+                                </div>
+                            </div>
+
+                            {{-- Ruangan & Objek --}}
                             <div>
                                 <label class="mb-1.5 block text-[11px] font-semibold text-[#5B3BA5]">
                                     Ruangan <span class="text-red-500">*</span>
@@ -216,9 +477,11 @@
                                     Deskripsi Masalah <span class="text-red-500">*</span>
                                 </label>
                                 <textarea name="description" x-model="form.deskripsi" rows="4"
+                                          placeholder="Jelaskan detail kerusakan sarana/prasarana secara rinci (minimal 10 karakter)..."
                                           class="block w-full resize-none rounded-[10px] border bg-white px-3 py-2 text-sm outline-none transition focus:border-[#6C4AB6] focus:ring-2 focus:ring-violet-200"
                                           :class="errors.deskripsi ? 'border-red-400' : 'border-slate-400'"></textarea>
                                 <p x-show="errors.deskripsi" x-text="errors.deskripsi" class="mt-1 text-[11px] text-red-600"></p>
+                            </div>
                             </div>
                         </div>
 
@@ -311,10 +574,37 @@
 
                                 {{-- Data --}}
                                 <dl class="space-y-3">
-                                    <div>
-                                        <dt class="text-[11px] font-semibold uppercase text-slate-400">Nama</dt>
-                                        <dd class="mt-0.5 text-sm font-bold text-black" x-text="form.nama"></dd>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <dt class="text-[11px] font-semibold uppercase text-slate-400">Status Pelapor</dt>
+                                            <dd class="mt-0.5 text-sm font-bold text-violet-700" x-text="reporterTypeLabel"></dd>
+                                        </div>
+                                        <div>
+                                            <dt class="text-[11px] font-semibold uppercase text-slate-400">Nama Pelapor</dt>
+                                            <dd class="mt-0.5 text-sm font-bold text-black" x-text="form.nama"></dd>
+                                        </div>
                                     </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <dt class="text-[11px] font-semibold uppercase text-slate-400">No. Telepon / Kontak</dt>
+                                            <dd class="mt-0.5 text-sm font-bold text-black" x-text="form.phone"></dd>
+                                        </div>
+                                        <template x-if="form.identifier">
+                                            <div>
+                                                <dt class="text-[11px] font-semibold uppercase text-slate-400" x-text="form.reporter_type === 'siswa' ? 'NIS / NISN' : 'NIP / No. Identitas'"></dt>
+                                                <dd class="mt-0.5 text-sm font-bold text-black" x-text="form.identifier"></dd>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <template x-if="form.reporter_type === 'siswa' && form.student_class">
+                                        <div>
+                                            <dt class="text-[11px] font-semibold uppercase text-slate-400">Kelas & Jurusan</dt>
+                                            <dd class="mt-0.5 text-sm font-bold text-black" x-text="form.student_class + (form.student_major ? ' · ' + form.student_major : '')"></dd>
+                                        </div>
+                                    </template>
+
                                     <div>
                                         <dt class="text-[11px] font-semibold uppercase text-slate-400">Ruangan</dt>
                                         <dd class="mt-0.5 text-sm font-bold text-black" x-text="roomName"></dd>
@@ -330,12 +620,55 @@
                                         <dd class="mt-0.5 whitespace-pre-line text-sm font-bold text-black" x-text="form.deskripsi"></dd>
                                     </div>
                                 </dl>
+
+                                {{-- VERIFIKASI KEAMANAN BOT (CLOUDFLARE TURNSTILE) --}}
+                                @if (empty($turnstileConfig['configured']))
+                                    <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+                                        <div class="flex items-start gap-3">
+                                            <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+                                            <div class="text-xs leading-relaxed">
+                                                <p class="font-bold">Konfigurasi CAPTCHA Diperlukan (Mode Administrator):</p>
+                                                <p class="mt-1">
+                                                    Layanan perlindungan bot Cloudflare Turnstile belum aktif karena <code>TURNSTILE_SITE_KEY</code> atau <code>TURNSTILE_SECRET_KEY</code> belum diisi pada file konfigurasi environment (.env) server.
+                                                </p>
+                                                <p class="mt-1 text-amber-800">
+                                                    Demi keamanan sistem, pengiriman pengaduan ditangguhkan sampai kunci konfigurasi dilengkapi.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="rounded-2xl border border-violet-100 bg-violet-50/40 p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div class="flex items-center gap-2">
+                                                <i data-lucide="shield-check" class="w-4 h-4 text-[#6C4AB6]"></i>
+                                                <span class="text-xs font-semibold text-slate-700">Verifikasi Keamanan</span>
+                                            </div>
+                                            <span class="text-[10px] text-slate-400">Cloudflare Turnstile</span>
+                                        </div>
+
+                                        <div class="flex flex-col items-center justify-center py-1">
+                                            <div id="cf-turnstile-container" class="min-h-[65px] flex items-center justify-center"></div>
+
+                                            <div x-show="turnstileError" x-cloak class="mt-2 text-center">
+                                                <p class="text-xs text-red-600 font-medium" x-text="turnstileError"></p>
+                                                <button type="button" @click="resetTurnstile()" class="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-[#6C4AB6] hover:underline">
+                                                    <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                                                    Muat ulang verifikasi
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <input type="hidden" name="cf-turnstile-response" x-ref="turnstileInput" :value="turnstileToken">
+                                        <p x-show="errors['cf-turnstile-response']" x-text="errors['cf-turnstile-response']" class="mt-1.5 text-center text-xs text-red-600 font-medium"></p>
+                                    </div>
+                                @endif
                             </div>
                         </div>
 
                         {{-- NAVIGASI --}}
                         <div class="mt-6 flex items-center gap-3">
-                            {{-- Tombol Kembali --}}
+                            {{-- Tombol Kembali (step > 1 kembali ke step sebelumnya, step 1 kembali ke pemilihan role) --}}
                             <template x-if="step > 1">
                                 <button type="button" @click="back()" :disabled="submitting"
                                         class="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl
@@ -347,9 +680,20 @@
                                     <span class="hidden sm:inline">Kembali</span>
                                 </button>
                             </template>
+                            <template x-if="step === 1">
+                                <button type="button" @click="resetRole()" :disabled="submitting"
+                                        class="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl
+                                            border-2 border-surface-200 bg-white px-4 sm:px-5
+                                            text-sm font-semibold text-surface-600
+                                            transition-all hover:bg-surface-50 hover:border-surface-300
+                                            active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                                    <span class="hidden sm:inline">Ganti Jenis Pelapor</span>
+                                </button>
+                            </template>
 
                             {{-- Tombol Lanjut (step 1) --}}
-                            <template x-if="step === 1">
+                            <template x-if="step === 1 && form.reporter_type !== 'pengunjung'">
                                 <button type="button" @click="next()"
                                         class="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl
                                             bg-primary-600 hover:bg-primary-700
@@ -374,12 +718,12 @@
 
                             {{-- Tombol Kirim (step 3) --}}
                             <template x-if="step === 3">
-                                <button type="submit" :disabled="submitting"
+                                <button type="submit" :disabled="submitting || (turnstileConfigured && !turnstileToken) || !turnstileConfigured"
                                         class="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl
                                             bg-primary-600 hover:bg-primary-700
                                             text-sm font-semibold text-white shadow-md hover:shadow-lg
                                             transition-all active:scale-[0.98]
-                                            disabled:opacity-70 disabled:cursor-not-allowed">
+                                            disabled:opacity-60 disabled:cursor-not-allowed">
                                     <template x-if="!submitting">
                                         <span class="inline-flex items-center gap-2">
                                             <i data-lucide="send" class="w-4 h-4"></i>
@@ -417,9 +761,10 @@
 
     </main>
 
-    {{-- Data rooms untuk Alpine — di-pass dari controller --}}
+    {{-- Data rooms & Turnstile untuk Alpine — di-pass dari controller --}}
     <script>
         window.pengaduanRoomsData = @json($roomsData);
+        window.turnstileConfig = @json($turnstileConfig ?? ['configured' => false, 'siteKey' => '', 'action' => 'pengaduan_sarpras']);
     </script>
 
 @endsection

@@ -13,7 +13,7 @@ use Illuminate\View\View;
 
 class AchievementController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function bulkAction(Request $request): RedirectResponse
     {
@@ -48,11 +48,11 @@ class AchievementController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'title'            => ['required', 'string', 'max:255'],
-            'description'      => ['nullable', 'string'],
-            'category'         => ['nullable', 'string', 'max:50'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', 'max:50'],
             'achievement_date' => ['nullable', 'date'],
-            'image'            => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
 
         if ($request->hasFile('image')) {
@@ -73,11 +73,11 @@ class AchievementController extends Controller
     public function update(Request $request, Achievement $achievement): RedirectResponse
     {
         $validated = $request->validate([
-            'title'            => ['required', 'string', 'max:255'],
-            'description'      => ['nullable', 'string'],
-            'category'         => ['nullable', 'string', 'max:50'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', 'max:50'],
             'achievement_date' => ['nullable', 'date'],
-            'image'            => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
 
         if ($request->hasFile('image')) {
@@ -94,12 +94,11 @@ class AchievementController extends Controller
     {
         $title = $achievement->title;
         if ($achievement->image) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($achievement->image);
+            Storage::disk('public')->delete($achievement->image);
         }
         $achievement->delete();
         $this->logActivity('delete', 'achievements', "Menghapus prestasi: {$title}");
 
         return redirect()->route('admin.achievements.index')->with('success', 'Prestasi berhasil dihapus.');
     }
-
 }

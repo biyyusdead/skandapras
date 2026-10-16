@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Kepala;
 
 use App\Enums\ApprovalStatus;
+use App\Enums\DamageCategory;
 use App\Enums\DamageReportStatus;
 use App\Enums\UserRole;
+use App\Enums\ValidityStatus;
 use App\Helpers\NotificationHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
@@ -12,6 +14,7 @@ use App\Models\DamageReport;
 use App\Traits\LogsActivity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ApprovalController extends Controller
@@ -20,10 +23,14 @@ class ApprovalController extends Controller
 
     public function index(Request $request): View
     {
-        // Laporan yang menunggu persetujuan tahap 2
+        // Hanya laporan kerusakan besar yang valid dan diajukan Waka yang masuk ke Kepala Sekolah
         $pending = DamageReport::query()
             ->with(['room:id,name', 'reporter:id,name'])
-            ->where('status', 'menunggu_persetujuan_2')
+            ->where('status', DamageReportStatus::MENUNGGU_PERSETUJUAN_2->value)
+            ->where(function ($q) {
+                $q->where('damage_category', DamageCategory::BERAT->value)
+                    ->orWhereNull('damage_category'); // fallback legacy
+            })
             ->latest()
             ->paginate(15);
 
@@ -40,36 +47,43 @@ class ApprovalController extends Controller
 
     /**
      * Approve Tahap 2 (Kepala Sekolah).
-     * Setelah ini status → disetujui/siap_diperbaiki.
+     * Setelah ini status → disetujui / siap ditugaskan untuk perbaikan.
      */
     public function approve(Request $request, DamageReport $report): RedirectResponse
     {
         abort_unless(
             $report->status === DamageReportStatus::MENUNGGU_PERSETUJUAN_2,
             422,
-            'Laporan tidak dalam status menunggu persetujuan 2.'
+            'Laporan tidak dalam status menunggu persetujuan Kepala Sekolah.'
         );
 
         $validated = $request->validate([
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        // Simpan/buat approval level 2
-        Approval::updateOrCreate(
-            ['damage_report_id' => $report->id, 'approval_level' => 2],
-            [
-                'approver_id' => auth()->id(),
-                'status'      => ApprovalStatus::APPROVED,
-                'notes'       => $validated['notes'] ?? null,
-                'approved_at' => now(),
-            ]
-        );
+        DB::transaction(function () use ($report, $validated) {
+            // Simpan/buat approval level 2
+            Approval::updateOrCreate(
+                ['damage_report_id' => $report->id, 'approval_level' => 2],
+                [
+                    'approver_id' => auth()->id(),
+                    'status' => ApprovalStatus::APPROVED,
+                    'notes' => $validated['notes'] ?? null,
+                    'approved_at' => now(),
+                ]
+            );
 
-        // Notifikasi ke Waka
+            // Update status laporan → disetujui
+            $report->update([
+                'status' => DamageReportStatus::DISETUJUI,
+            ]);
+        });
+
+        // Notifikasi ke Waka Sarpras
         NotificationHelper::toRole(
             UserRole::WAKA_SARPRAS,
-            'Laporan Siap Diperbaiki',
-            "Laporan {$report->report_code} telah disetujui Kepala Sekolah",
+            'Laporan Kerusakan Besar Disetujui',
+            "Laporan {$report->report_code} telah disetujui Kepala Sekolah dan siap ditugaskan perbaikan.",
             route('waka.damage-reports.show', $report),
             'check-circle',
             'green'
@@ -78,20 +92,17 @@ class ApprovalController extends Controller
         // Notifikasi ke Pelapor
         NotificationHelper::toUser(
             $report->reporter,
-            'Laporan Anda Disetujui',
-            "Laporan {$report->report_code} akan segera diproses",
+            'Laporan Anda Disetujui Kepala Sekolah',
+            "Laporan {$report->report_code} telah disetujui Kepala Sekolah dan akan segera diproses perbaikan.",
             route('pengguna.damage-reports.show', $report),
             'check-circle',
             'green'
         );
 
-        // Update status → disetujui
-        $report->update(['status' => DamageReportStatus::DISETUJUI]);
-
         $this->logActivity('approve', 'damage-reports', "Menyetujui laporan tahap 2: {$report->report_code}");
 
         return redirect()->route('kepala.damage-reports.show', $report)
-            ->with('success', 'Laporan disetujui. Waka Sarpras dapat memulai perbaikan.');
+            ->with('success', 'Laporan kerusakan besar berhasil disetujui. Waka Sarpras dapat menugaskan petugas perbaikan.');
     }
 
     /**
@@ -102,27 +113,37 @@ class ApprovalController extends Controller
         abort_unless(
             $report->status === DamageReportStatus::MENUNGGU_PERSETUJUAN_2,
             422,
-            'Laporan tidak dalam status menunggu persetujuan 2.'
+            'Laporan tidak dalam status menunggu persetujuan Kepala Sekolah.'
         );
 
         $validated = $request->validate([
             'notes' => ['required', 'string', 'max:1000'],
+        ], [
+            'notes.required' => 'Alasan penolakan wajib diisi.',
         ]);
 
-        Approval::updateOrCreate(
-            ['damage_report_id' => $report->id, 'approval_level' => 2],
-            [
-                'approver_id' => auth()->id(),
-                'status'      => ApprovalStatus::REJECTED,
-                'notes'       => $validated['notes'],
-                'approved_at' => now(),
-            ]
-        );
+        DB::transaction(function () use ($report, $validated) {
+            Approval::updateOrCreate(
+                ['damage_report_id' => $report->id, 'approval_level' => 2],
+                [
+                    'approver_id' => auth()->id(),
+                    'status' => ApprovalStatus::REJECTED,
+                    'notes' => $validated['notes'],
+                    'approved_at' => now(),
+                ]
+            );
+
+            $report->update([
+                'status' => DamageReportStatus::DITOLAK,
+                'validity_status' => ValidityStatus::DITOLAK,
+                'rejection_reason' => $validated['notes'],
+            ]);
+        });
 
         NotificationHelper::toRole(
             UserRole::WAKA_SARPRAS,
             'Laporan Ditolak Kepala Sekolah',
-            "Laporan {$report->report_code} ditolak: {$validated['notes']}",
+            "Laporan {$report->report_code} ditolak Kepala Sekolah: {$validated['notes']}",
             route('waka.damage-reports.show', $report),
             'x-circle',
             'red'
@@ -131,17 +152,15 @@ class ApprovalController extends Controller
         NotificationHelper::toUser(
             $report->reporter,
             'Laporan Ditolak',
-            "Laporan {$report->report_code} ditolak oleh Kepala Sekolah",
+            "Laporan {$report->report_code} ditolak oleh Kepala Sekolah: {$validated['notes']}",
             route('pengguna.damage-reports.show', $report),
             'x-circle',
             'red'
         );
 
-        $report->update(['status' => DamageReportStatus::DITOLAK]);
-
         $this->logActivity('reject', 'damage-reports', "Menolak laporan tahap 2: {$report->report_code}");
 
         return redirect()->route('kepala.damage-reports.show', $report)
-            ->with('success', 'Laporan ditolak.');
+            ->with('success', 'Laporan berhasil ditolak.');
     }
 }

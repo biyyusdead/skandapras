@@ -12,11 +12,11 @@ use Illuminate\View\View;
 
 class InternshipController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function bulkAction(Request $request): RedirectResponse
     {
-        return $this->handleBulkAction($request, \App\Models\Internship::class, 'internships');
+        return $this->handleBulkAction($request, Internship::class, 'internships');
     }
 
     public function index(Request $request): View
@@ -40,12 +40,12 @@ class InternshipController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'title'       => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'company'     => ['nullable', 'string', 'max:255'],
-            'start_date'  => ['nullable', 'date'],
-            'end_date'    => ['nullable', 'date', 'after_or_equal:start_date'],
-            'is_active'   => ['boolean'],
+            'company' => ['nullable', 'string', 'max:255'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 
@@ -63,12 +63,12 @@ class InternshipController extends Controller
     public function update(Request $request, Internship $internship): RedirectResponse
     {
         $validated = $request->validate([
-            'title'       => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'company'     => ['nullable', 'string', 'max:255'],
-            'start_date'  => ['nullable', 'date'],
-            'end_date'    => ['nullable', 'date', 'after_or_equal:start_date'],
-            'is_active'   => ['boolean'],
+            'company' => ['nullable', 'string', 'max:255'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 

@@ -77,8 +77,8 @@ class TeacherSeeder extends Seeder
             Teacher::updateOrCreate(
                 ['nip' => $t['nip']],
                 array_merge($t, [
-                    'phone'     => '0812' . str_pad($i + 1, 8, '0', STR_PAD_LEFT),
-                    'photo'     => null, // placeholder di view
+                    'phone' => '0812'.str_pad($i + 1, 8, '0', STR_PAD_LEFT),
+                    'photo' => null, // placeholder di view
                     'is_active' => true,
                 ])
             );

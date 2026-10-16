@@ -21,5 +21,5 @@ return new class extends Migration
         Schema::table('rooms', function (Blueprint $table) {
             $table->dropColumn('panorama_file');
         });
-}
+    }
 };

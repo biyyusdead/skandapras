@@ -4,25 +4,25 @@ namespace App\Enums;
 
 enum ItemCondition: string
 {
-    case BAIK         = 'baik';
+    case BAIK = 'baik';
     case RUSAK_RINGAN = 'rusak_ringan';
-    case RUSAK_BERAT  = 'rusak_berat';
+    case RUSAK_BERAT = 'rusak_berat';
 
     public function label(): string
     {
         return match ($this) {
-            self::BAIK         => 'Baik',
+            self::BAIK => 'Baik',
             self::RUSAK_RINGAN => 'Rusak Ringan',
-            self::RUSAK_BERAT  => 'Rusak Berat',
+            self::RUSAK_BERAT => 'Rusak Berat',
         };
     }
 
     public function color(): string
     {
         return match ($this) {
-            self::BAIK         => 'green',
+            self::BAIK => 'green',
             self::RUSAK_RINGAN => 'yellow',
-            self::RUSAK_BERAT  => 'red',
+            self::RUSAK_BERAT => 'red',
         };
     }
 }

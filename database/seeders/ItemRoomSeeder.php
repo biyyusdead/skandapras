@@ -13,6 +13,7 @@ class ItemRoomSeeder extends Seeder
     {
         if (Room::count() === 0) {
             $this->command->warn('Tidak ada Room. Jalankan RoomSeeder dulu.');
+
             return;
         }
 
@@ -30,28 +31,30 @@ class ItemRoomSeeder extends Seeder
             'SPU-LNT' => 1,
             'PEL-LNT' => 1,
             'TPS-SMP' => 2,
-            'KMC-NG'  => 1,
+            'KMC-NG' => 1,
         ];
 
         // Barang khusus per tipe ruangan
         $byRoomType = [
-            'lab'     => ['MJS-LAB' => 20, 'KRS-LAB' => 20, 'APR-KBR' => 1, 'P3K-KTK' => 1],
-            'kelas'   => ['PRY-LCD' => 1, 'LYR-PRY' => 1, 'AC-SPL' => 2],
-            'kantor'  => ['KMP-DSK' => 1, 'PRN-LSR' => 1, 'AC-SPL' => 1],
+            'lab' => ['MJS-LAB' => 20, 'KRS-LAB' => 20, 'APR-KBR' => 1, 'P3K-KTK' => 1],
+            'kelas' => ['PRY-LCD' => 1, 'LYR-PRY' => 1, 'AC-SPL' => 2],
+            'kantor' => ['KMP-DSK' => 1, 'PRN-LSR' => 1, 'AC-SPL' => 1],
         ];
 
         foreach ($rooms as $room) {
             // Common items
             foreach ($commonItems as $code => $qty) {
                 $item = $items->get($code);
-                if (!$item) continue;
+                if (! $item) {
+                    continue;
+                }
 
                 ItemRoom::updateOrCreate(
                     ['item_id' => $item->id, 'room_id' => $room->id],
                     [
-                        'quantity'  => $qty,
+                        'quantity' => $qty,
                         'condition' => 'baik',
-                        'notes'     => null,
+                        'notes' => null,
                     ]
                 );
             }
@@ -84,14 +87,16 @@ class ItemRoomSeeder extends Seeder
     {
         foreach ($map as $code => $qty) {
             $item = $items->get($code);
-            if (!$item) continue;
+            if (! $item) {
+                continue;
+            }
 
             ItemRoom::updateOrCreate(
                 ['item_id' => $item->id, 'room_id' => $room->id],
                 [
-                    'quantity'  => $qty,
+                    'quantity' => $qty,
                     'condition' => 'baik',
-                    'notes'     => null,
+                    'notes' => null,
                 ]
             );
         }

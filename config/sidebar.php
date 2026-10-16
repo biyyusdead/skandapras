@@ -4,14 +4,14 @@ return [
 
     'admin' => [
         [
-            'label'    => 'Dashboard',
-            'route'    => 'admin.dashboard',
-            'icon'     => 'home',
-            'match'    => 'admin.dashboard',
+            'label' => 'Dashboard',
+            'route' => 'admin.dashboard',
+            'icon' => 'home',
+            'match' => 'admin.dashboard',
         ],
         [
             'label' => 'Data Master',
-            'icon'  => 'database',
+            'icon' => 'database',
             'children' => [
                 ['label' => 'Data Sekolah', 'route' => 'admin.school.edit', 'match' => 'admin.school.*'],
                 ['label' => 'Data Users',   'route' => 'admin.users.index', 'match' => 'admin.users.*'],
@@ -19,7 +19,7 @@ return [
         ],
         [
             'label' => 'Akademik',
-            'icon'  => 'graduation-cap',
+            'icon' => 'graduation-cap',
             'children' => [
                 ['label' => 'Data Jurusan', 'route' => 'admin.departments.index', 'match' => 'admin.departments.*'],
                 ['label' => 'Data Guru',    'route' => 'admin.teachers.index',    'match' => 'admin.teachers.*'],
@@ -30,7 +30,7 @@ return [
         ],
         [
             'label' => 'Kesiswaan',
-            'icon'  => 'users',
+            'icon' => 'users',
             'children' => [
                 ['label' => 'Data Prestasi',        'route' => 'admin.achievements.index',     'match' => 'admin.achievements.*'],
                 ['label' => 'Data Ekstrakurikuler', 'route' => 'admin.extracurriculars.index', 'match' => 'admin.extracurriculars.*'],
@@ -40,7 +40,7 @@ return [
         ],
         [
             'label' => 'Berita',
-            'icon'  => 'newspaper',
+            'icon' => 'newspaper',
             'children' => [
                 ['label' => 'Data Berita', 'route' => 'admin.news.index', 'match' => 'admin.news.*'],
             ],
@@ -48,7 +48,7 @@ return [
         [
             'label' => 'Log Aktivitas',
             'route' => 'admin.logs.index',
-            'icon'  => 'scroll-text',
+            'icon' => 'scroll-text',
             'match' => 'admin.logs.*',
         ],
     ],
@@ -57,12 +57,12 @@ return [
         [
             'label' => 'Dashboard',
             'route' => 'waka.dashboard',
-            'icon'  => 'home',
+            'icon' => 'home',
             'match' => 'waka.dashboard',
         ],
         [
             'label' => 'Sarana & Prasarana',
-            'icon'  => 'door-open',
+            'icon' => 'door-open',
             'children' => [
                 ['label' => 'Data Ruangan',  'route' => 'waka.rooms.index',      'match' => 'waka.rooms.*'],
                 ['label' => 'Data Kategori', 'route' => 'waka.categories.index', 'match' => 'waka.categories.*'],
@@ -71,7 +71,7 @@ return [
         ],
         [
             'label' => 'Laporan',
-            'icon'  => 'file-text',
+            'icon' => 'file-text',
             'children' => [
                 ['label' => 'Laporan Kerusakan', 'route' => 'waka.damage-reports.index', 'match' => 'waka.damage-reports.*'],
                 ['label' => 'Laporan Perbaikan', 'route' => 'waka.repair-reports.index', 'match' => 'waka.repair-reports.*'],
@@ -80,7 +80,7 @@ return [
         [
             'label' => 'Persetujuan',
             'route' => 'waka.approvals.index',
-            'icon'  => 'check-circle',
+            'icon' => 'check-circle',
             'match' => 'waka.approvals.*',
         ],
     ],
@@ -89,12 +89,12 @@ return [
         [
             'label' => 'Dashboard',
             'route' => 'kepala.dashboard',
-            'icon'  => 'home',
+            'icon' => 'home',
             'match' => 'kepala.dashboard',
         ],
         [
             'label' => 'Monitoring',
-            'icon'  => 'eye',
+            'icon' => 'eye',
             'children' => [
                 ['label' => 'Skor Ruangan',      'route' => 'kepala.rooms.index',          'match' => 'kepala.rooms.*'],
                 ['label' => 'Laporan Kerusakan', 'route' => 'kepala.damage-reports.index', 'match' => 'kepala.damage-reports.*'],
@@ -104,7 +104,7 @@ return [
         [
             'label' => 'Persetujuan 2',
             'route' => 'kepala.approvals.index',
-            'icon'  => 'check-circle',
+            'icon' => 'check-circle',
             'match' => 'kepala.approvals.*',
         ],
     ],
@@ -113,19 +113,19 @@ return [
         [
             'label' => 'Dashboard',
             'route' => 'pengguna.dashboard',
-            'icon'  => 'home',
+            'icon' => 'home',
             'match' => 'pengguna.dashboard',
         ],
         [
             'label' => 'Ruangan Saya',
             'route' => 'pengguna.rooms.index',
-            'icon'  => 'door-open',
+            'icon' => 'door-open',
             'match' => 'pengguna.rooms.*',
         ],
         [
             'label' => 'Laporan Saya',
             'route' => 'pengguna.damage-reports.index',
-            'icon'  => 'file-text',
+            'icon' => 'file-text',
             'match' => 'pengguna.damage-reports.*',
         ],
     ],

@@ -21,5 +21,5 @@ return new class extends Migration
         Schema::table('school_rules', function (Blueprint $table) {
             $table->dropColumn('image');
         });
-}
+    }
 };

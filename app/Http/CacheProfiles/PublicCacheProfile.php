@@ -24,12 +24,12 @@ class PublicCacheProfile extends CacheAllSuccessfulGetRequests
      * Route yang BOLEH cache + TTL (detik).
      */
     protected array $cacheableRoutes = [
-        'public.home'             => 300,    // 5 menit
-        'public.profile.*'        => 3600,   // 1 jam
-        'public.rooms.*'          => 600,    // 10 menit
-        'public.akademik.*'       => 1800,   // 30 menit
-        'public.kesiswaan.*'      => 600,    // 10 menit
-        'public.news.*'           => 300,    // 5 menit
+        'public.home' => 300,    // 5 menit
+        'public.profile.*' => 3600,   // 1 jam
+        'public.rooms.*' => 600,    // 10 menit
+        'public.akademik.*' => 1800,   // 30 menit
+        'public.kesiswaan.*' => 600,    // 10 menit
+        'public.news.*' => 300,    // 5 menit
     ];
 
     /**
@@ -38,7 +38,7 @@ class PublicCacheProfile extends CacheAllSuccessfulGetRequests
     public function shouldCacheRequest(Request $request): bool
     {
         // Hanya GET
-        if (!$request->isMethod('GET')) {
+        if (! $request->isMethod('GET')) {
             return false;
         }
 
@@ -90,7 +90,7 @@ class PublicCacheProfile extends CacheAllSuccessfulGetRequests
     public function shouldCacheResponse(Response $response): bool
     {
         // Hanya cache response 200/301/302
-        if (!in_array($response->getStatusCode(), [200, 301, 302])) {
+        if (! in_array($response->getStatusCode(), [200, 301, 302])) {
             return false;
         }
 

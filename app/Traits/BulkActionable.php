@@ -18,25 +18,25 @@ trait BulkActionable
         array $options = []
     ): RedirectResponse {
         $validated = $request->validate([
-            'ids'         => ['required', 'string'],
+            'ids' => ['required', 'string'],
             'bulk_action' => ['required', 'in:activate,deactivate,delete'],
         ]);
 
         $ids = json_decode($validated['ids'], true);
 
-        if (empty($ids) || !is_array($ids)) {
+        if (empty($ids) || ! is_array($ids)) {
             return back()->with('error', 'Tidak ada data yang dipilih.');
         }
 
         $query = $modelClass::whereIn('id', $ids);
 
         // Proteksi: jangan hapus diri sendiri
-        if (!empty($options['exclude_self']) && auth()->check()) {
+        if (! empty($options['exclude_self']) && auth()->check()) {
             $query->where('id', '!=', auth()->id());
         }
 
         // Proteksi: cek foreign key (kalau ada)
-        if (!empty($options['protect_relations'])) {
+        if (! empty($options['protect_relations'])) {
             $protectedIds = [];
             foreach ($options['protect_relations'] as $relation) {
                 $withRelation = $modelClass::whereIn('id', $ids)
@@ -46,7 +46,7 @@ trait BulkActionable
                 $protectedIds = array_merge($protectedIds, $withRelation);
             }
 
-            if (!empty($protectedIds)) {
+            if (! empty($protectedIds)) {
                 $query->whereNotIn('id', $protectedIds);
             }
         }
@@ -55,11 +55,11 @@ trait BulkActionable
 
         if ($action === 'delete') {
             // Hapus file terkait dulu (kalau ada)
-            if (!empty($options['delete_files'])) {
+            if (! empty($options['delete_files'])) {
                 $items = $query->get();
                 foreach ($items as $item) {
                     foreach ($options['delete_files'] as $field) {
-                        if ($item->$field && !str_starts_with($item->$field, 'http')) {
+                        if ($item->$field && ! str_starts_with($item->$field, 'http')) {
                             Storage::disk('public')->delete($item->$field);
                         }
                     }
@@ -70,7 +70,7 @@ trait BulkActionable
 
             $this->logActivity('delete', $module, "Bulk delete {$count} data");
 
-            return back()->with('success', "{$count} data berhasil dihapus." . (!empty($protectedIds) ? " " . count($protectedIds) . " data tidak bisa dihapus karena masih terkait." : ''));
+            return back()->with('success', "{$count} data berhasil dihapus.".(! empty($protectedIds) ? ' '.count($protectedIds).' data tidak bisa dihapus karena masih terkait.' : ''));
         }
 
         if ($action === 'activate') {

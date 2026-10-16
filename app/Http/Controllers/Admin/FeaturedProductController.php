@@ -8,12 +8,13 @@ use App\Traits\BulkActionable;
 use App\Traits\LogsActivity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class FeaturedProductController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function bulkAction(Request $request): RedirectResponse
     {
@@ -45,13 +46,13 @@ class FeaturedProductController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'category'    => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', 'string', 'max:100'],
             'code' => ['nullable', 'string', 'max:20', 'unique:featured_products,code'],
-            'contact'     => ['nullable', 'string', 'max:30'],
-            'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'is_active'   => ['boolean'],
+            'contact' => ['nullable', 'string', 'max:30'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 
@@ -70,18 +71,17 @@ class FeaturedProductController extends Controller
         return view('admin.products.edit', compact('product'));
     }
 
-
     public function update(Request $request, FeaturedProduct $product): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'category'    => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', 'string', 'max:100'],
             'code' => ['nullable', 'string', 'max:20',
                 Rule::unique('featured_products', 'code')->ignore($product->id)],
-            'contact'     => ['nullable', 'string', 'max:30'],
-            'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'is_active'   => ['boolean'],
+            'contact' => ['nullable', 'string', 'max:30'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 
@@ -99,7 +99,7 @@ class FeaturedProductController extends Controller
     {
         $name = $product->name;
         if ($product->image) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($product->image);
+            Storage::disk('public')->delete($product->image);
         }
         $product->delete();
         $this->logActivity('delete', 'products', "Menghapus produk: {$name}");

@@ -8,17 +8,16 @@ use App\Traits\BulkActionable;
 use App\Traits\LogsActivity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DepartmentController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function bulkAction(Request $request): RedirectResponse
     {
-        return $this->handleBulkAction($request, \App\Models\Department::class, 'departments');
+        return $this->handleBulkAction($request, Department::class, 'departments');
     }
 
     public function index(Request $request): View
@@ -42,11 +41,11 @@ class DepartmentController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
-            'code'        => ['required', 'string', 'max:20', 'unique:departments,code'],
+            'name' => ['required', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:20', 'unique:departments,code'],
             'description' => ['nullable', 'string'],
-            'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:2048'],
-            'is_active'   => ['boolean'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:2048'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 
@@ -69,11 +68,11 @@ class DepartmentController extends Controller
     public function update(Request $request, Department $department): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
-            'code'        => ['required', 'string', 'max:20', Rule::unique('departments', 'code')->ignore($department->id)],
+            'name' => ['required', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:20', Rule::unique('departments', 'code')->ignore($department->id)],
             'description' => ['nullable', 'string'],
-            'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:2048'],
-            'is_active'   => ['boolean'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:2048'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 

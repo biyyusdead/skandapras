@@ -11,14 +11,15 @@ class Teacher extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'code', 'description', 'image', 'icon', 'color',
+        'name', 'gender', 'nip', 'email', 'phone', 'position', 'subject', 'competency', 'photo',
+        'code', 'description', 'image', 'icon', 'color',
         'vision', 'mission', 'gallery', 'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'gallery'   => 'array',
+            'gallery' => 'array',
             'is_active' => 'boolean',
         ];
     }

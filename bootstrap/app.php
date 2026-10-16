@@ -5,6 +5,8 @@ use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Spatie\ResponseCache\Middlewares\CacheResponse;
+use Spatie\ResponseCache\Middlewares\DoNotCacheResponse;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,15 +16,15 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
-            \App\Http\Middleware\EnsureUserIsActive::class,
+            EnsureUserIsActive::class,
         ]);
 
         // ✅ TAMBAH INI
-        $middleware->append(\Spatie\ResponseCache\Middlewares\CacheResponse::class);
+        $middleware->append(CacheResponse::class);
 
         $middleware->alias([
-            'role'                => \App\Http\Middleware\EnsureUserHasRole::class,
-            'doNotCacheResponse'  => \Spatie\ResponseCache\Middlewares\DoNotCacheResponse::class,
+            'role' => EnsureUserHasRole::class,
+            'doNotCacheResponse' => DoNotCacheResponse::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

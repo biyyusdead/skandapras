@@ -14,7 +14,7 @@ class Department extends Model
         'name',
         'code',
         'description',
-        'image', 
+        'image',
         'is_active',
     ];
 

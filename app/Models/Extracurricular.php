@@ -19,7 +19,7 @@ class Extracurricular extends Model
     protected function casts(): array
     {
         return [
-            'gallery'   => 'array',
+            'gallery' => 'array',
             'is_active' => 'boolean',
         ];
     }
@@ -29,7 +29,7 @@ class Extracurricular extends Model
     {
         static::creating(function ($model) {
             if (empty($model->slug)) {
-                $model->slug = Str::slug($model->name) . '-' . Str::random(5);
+                $model->slug = Str::slug($model->name).'-'.Str::random(5);
             }
         });
     }

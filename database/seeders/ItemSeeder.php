@@ -47,7 +47,7 @@ class ItemSeeder extends Seeder
 
             // ATK
             ['ATK', 'Spidol Whiteboard',  'SPD-WB',   'Snowman',      'Spidol papan tulis'],
-            ['ATK', 'Penghapus Whiteboard','PHPS-WB', null,           'Penghapus papan'],
+            ['ATK', 'Penghapus Whiteboard', 'PHPS-WB', null,           'Penghapus papan'],
             ['ATK', 'Pulpen',             'PLP-STD',  'Standard',     'Pulpen standar'],
             ['ATK', 'Kertas HVS A4',      'KRS-A4',   'Sidu',         'Kertas HVS A4'],
 
@@ -74,10 +74,10 @@ class ItemSeeder extends Seeder
                 ['code' => $code],
                 [
                     'category_id' => $cat[$catCode] ?? null,
-                    'name'        => $name,
-                    'brand'       => $brand,
+                    'name' => $name,
+                    'brand' => $brand,
                     'description' => $desc,
-                    'is_active'   => true,
+                    'is_active' => true,
                 ]
             );
         }

@@ -306,19 +306,28 @@ export function registerChatbot() {
                 });
 
                 if (response.status === 429) {
-                    return { text: 'Terlalu banyak pertanyaan. Coba lagi sebentar ya.', error: true };
+                    let rateMsg = 'Batas penggunaan chatbot tercapai. Silakan coba kembali nanti.';
+                    try {
+                        const rateData = await response.json();
+                        if (rateData.reply) rateMsg = rateData.reply;
+                    } catch (_) {}
+                    return { text: rateMsg, error: true };
                 }
 
                 const data = await response.json();
 
                 if (!response.ok) {
-                    return { text: data.message || 'Maaf, terjadi kesalahan.', error: true };
+                    let errMsg = data.reply || data.message || 'Maaf, terjadi kendala saat memproses jawaban.';
+                    if (data.errors && data.errors.message) {
+                        errMsg = data.errors.message[0];
+                    }
+                    return { text: errMsg, error: true };
                 }
 
                 return { text: data.reply || 'Maaf, saya belum mendapatkan jawaban.', error: !data.reply };
             } catch (error) {
-                console.error(error);
-                return { text: 'Maaf, terjadi masalah saat menghubungi server.', error: true };
+                console.error('[Chatbot] Request error:', error);
+                return { text: 'Maaf, terjadi kendala teknis atau koneksi internet. Silakan coba kembali sebentar lagi.', error: true };
             }
         },
     };

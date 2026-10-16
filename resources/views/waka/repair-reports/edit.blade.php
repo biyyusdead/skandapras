@@ -93,6 +93,11 @@
             </x-ui.card>
         </div>
 
+        <div id="auto-complete-notice" class="hidden p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2.5">
+            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 shrink-0"></i>
+            <span><strong>Foto Bukti Setelah Terpilih:</strong> Status perbaikan otomatis disesuaikan menjadi <strong>Selesai</strong> dan tanggal selesai otomatis terisi hari ini.</span>
+        </div>
+
         <div class="flex items-center justify-end gap-2">
             <x-ui.button href="{{ route('waka.repair-reports.index') }}" variant="secondary">Batal</x-ui.button>
             <x-ui.button type="submit" icon="save" :loading="true">Simpan Perubahan</x-ui.button>
@@ -113,6 +118,21 @@
             preview.src = e.target.result;
             preview.classList.remove('hidden');
             if (placeholder) placeholder.classList.add('hidden');
+
+            if (prefix === 'after') {
+                const statusSelect = document.getElementById('status');
+                if (statusSelect) {
+                    statusSelect.value = 'completed';
+                }
+                const completedAtInput = document.getElementById('completed_at');
+                if (completedAtInput && !completedAtInput.value) {
+                    completedAtInput.value = new Date().toISOString().split('T')[0];
+                }
+                const notice = document.getElementById('auto-complete-notice');
+                if (notice) {
+                    notice.classList.remove('hidden');
+                }
+            }
         };
         reader.readAsDataURL(file);
     }

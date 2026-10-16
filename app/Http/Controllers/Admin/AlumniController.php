@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
 
 class AlumniController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function index(Request $request)
     {
@@ -22,9 +22,9 @@ class AlumniController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('department', 'like', "%{$search}%")
-                  ->orWhere('achievement', 'like', "%{$search}%")
-                  ->orWhere('motto', 'like', "%{$search}%");
+                    ->orWhere('department', 'like', "%{$search}%")
+                    ->orWhere('achievement', 'like', "%{$search}%")
+                    ->orWhere('motto', 'like', "%{$search}%");
             });
         }
 
@@ -122,13 +122,13 @@ class AlumniController extends Controller
     protected function validateData(Request $request): array
     {
         return $request->validate([
-            'name'             => 'required|string|max:255',
-            'photo'            => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'graduation_year'  => 'nullable|integer|min:1990|max:' . (date('Y') + 1),
-            'department'       => 'nullable|string|max:100',
-            'achievement'      => 'nullable|string|max:255',
-            'motto'            => 'nullable|string|max:255',
-            'description'      => 'nullable|string|max:1000',
+            'name' => 'required|string|max:255',
+            'photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'graduation_year' => 'nullable|integer|min:1990|max:'.(date('Y') + 1),
+            'department' => 'nullable|string|max:100',
+            'achievement' => 'nullable|string|max:255',
+            'motto' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:1000',
         ]);
     }
 

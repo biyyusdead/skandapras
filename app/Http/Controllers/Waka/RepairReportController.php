@@ -12,6 +12,7 @@ use App\Models\RepairReport;
 use App\Traits\LogsActivity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -57,13 +58,13 @@ class RepairReportController extends Controller
     /**
      * Form buat repair — dari damage report yang sudah disetujui 2 tahap.
      */
-    public function create(DamageReport $report): View
+    public function create(DamageReport $report): View|RedirectResponse
     {
-        // Validasi: laporan harus sudah approved kedua tahap
+        // Validasi: laporan harus sudah disetujui sesuai kategori kerusakan
         abort_unless(
             $report->canBeRepaired(),
             403,
-            'Laporan belum disetujui kedua tahap approval.'
+            'Laporan belum memenuhi syarat persetujuan perbaikan.'
         );
 
         // Cegah duplikasi kalau sudah ada repair aktif
@@ -94,8 +95,19 @@ class RepairReportController extends Controller
 
         $report = DamageReport::findOrFail($validated['damage_report_id']);
 
-        // Validasi lagi
-        abort_unless($report->canBeRepaired(), 403, 'Laporan belum disetujui kedua tahap.');
+        // Validasi syarat persetujuan
+        if (! $report->canBeRepaired()) {
+            return redirect()
+                ->route('waka.damage-reports.show', $report)
+                ->with('error', 'Laporan belum memenuhi syarat persetujuan untuk perbaikan.');
+        }
+
+        // Cegah duplikasi penugasan
+        if ($report->repairReports()->whereIn('status', ['ready', 'in_progress'])->exists()) {
+            return redirect()
+                ->route('waka.damage-reports.show', $report)
+                ->with('error', 'Laporan ini sudah memiliki proses perbaikan aktif.');
+        }
 
         $validated['created_by'] = auth()->id();
         $validated['status'] = RepairStatus::IN_PROGRESS;
@@ -104,10 +116,12 @@ class RepairReportController extends Controller
             $validated['repair_evidence_before'] = handle_upload($request->file('repair_evidence_before'), 'repairs');
         }
 
-        $repair = RepairReport::create($validated);
+        $repair = DB::transaction(function () use ($validated, $report) {
+            $repair = RepairReport::create($validated);
+            $report->update(['status' => DamageReportStatus::DIPROSES]);
 
-        // Update status laporan → DIPROSES
-        $report->update(['status' => DamageReportStatus::DIPROSES]);
+            return $repair;
+        });
 
         $this->logActivity('create', 'repair-reports', "Memulai perbaikan untuk laporan: {$report->report_code}");
 
@@ -144,6 +158,15 @@ class RepairReportController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        // Otomatis ubah status menjadi Selesai jika foto bukti setelah diunggah atau tanggal selesai diisi
+        if ($request->hasFile('repair_evidence_after') || ! empty($validated['completed_at'])) {
+            $validated['status'] = RepairStatus::COMPLETED->value;
+        }
+
+        if ($validated['status'] === RepairStatus::COMPLETED->value && empty($validated['completed_at'])) {
+            $validated['completed_at'] = now()->toDateString();
+        }
+
         if ($request->hasFile('repair_evidence_before')) {
             $validated['repair_evidence_before'] = handle_upload(
                 $request->file('repair_evidence_before'), 'repairs', $repair->repair_evidence_before
@@ -156,48 +179,96 @@ class RepairReportController extends Controller
             );
         }
 
-        $repair->update($validated);
+        DB::transaction(function () use ($repair, $validated) {
+            $repair->update($validated);
 
-        // Kalau status = completed, update damage report → SELESAI
-        if ($repair->status === RepairStatus::COMPLETED) {
-            $repair->damageReport->update(['status' => DamageReportStatus::SELESAI]);
-
-            // Update kondisi barang jika ada item
-            if ($repair->damageReport->itemRoom) {
-                $repair->damageReport->itemRoom->update(['condition' => 'baik']);
+            if ($repair->status === RepairStatus::COMPLETED) {
+                $this->markRepairAsCompleted($repair);
             }
-
-            // Update kondisi ruangan jika sebelumnya rusak
-            $room = $repair->damageReport->room;
-            if ($room) {
-                $room->update(['health_score' => $room->recalculateHealthScore()]);
-            }
-
-            NotificationHelper::toUser(
-                $repair->damageReport->reporter,
-                'Perbaikan Selesai',
-                "Kerusakan di {$repair->damageReport->room->name} telah selesai diperbaiki",
-                route('pengguna.damage-reports.show', $repair->damageReport),
-                'check-check',
-                'green'
-            );
-
-            // Notifikasi ke Kepala Sekolah
-            NotificationHelper::toRole(
-                UserRole::KEPALA_SEKOLAH,
-                'Perbaikan Selesai',
-                "Laporan {$repair->damageReport->report_code} telah selesai",
-                route('kepala.damage-reports.show', $repair->damageReport),
-                'check-check',
-                'green'
-            );
-        }
+        });
 
         $this->logActivity('update', 'repair-reports', "Memperbarui perbaikan: {$repair->damageReport->report_code}");
 
         return redirect()
             ->route('waka.repair-reports.index')
             ->with('success', 'Data perbaikan berhasil diperbarui.');
+    }
+
+    /**
+     * Selesaikan perbaikan langsung dengan bukti foto dan tanggal penyelesaian.
+     */
+    public function complete(Request $request, RepairReport $repair): RedirectResponse
+    {
+        $validated = $request->validate([
+            'repair_evidence_after' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'completed_at' => ['nullable', 'date'],
+            'repair_cost' => ['nullable', 'numeric', 'min:0'],
+            'repair_description' => ['nullable', 'string', 'max:2000'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($request->hasFile('repair_evidence_after')) {
+            $validated['repair_evidence_after'] = handle_upload(
+                $request->file('repair_evidence_after'), 'repairs', $repair->repair_evidence_after
+            );
+        }
+
+        $validated['status'] = RepairStatus::COMPLETED->value;
+        $validated['completed_at'] = $validated['completed_at'] ?? now()->toDateString();
+
+        DB::transaction(function () use ($repair, $validated) {
+            $repair->update($validated);
+            $this->markRepairAsCompleted($repair);
+        });
+
+        $this->logActivity('update', 'repair-reports', "Menyelesaikan perbaikan untuk laporan: {$repair->damageReport->report_code}");
+
+        return redirect()
+            ->route('waka.damage-reports.show', $repair->damageReport)
+            ->with('success', 'Perbaikan berhasil diselesaikan dan status laporan kini SELESAI.');
+    }
+
+    /**
+     * Tandai laporan pengaduan, kondisi barang, dan ruangan selesai diperbaiki.
+     */
+    protected function markRepairAsCompleted(RepairReport $repair): void
+    {
+        $damageReport = $repair->damageReport;
+        if (! $damageReport) {
+            return;
+        }
+
+        $damageReport->update(['status' => DamageReportStatus::SELESAI]);
+
+        // Update kondisi barang jika ada item terkait
+        if ($damageReport->itemRoom) {
+            $damageReport->itemRoom->update(['condition' => 'baik']);
+        }
+
+        // Hitung ulang kondisi ruangan
+        $room = $damageReport->room;
+        if ($room) {
+            $room->update(['health_score' => $room->recalculateHealthScore()]);
+        }
+
+        NotificationHelper::toUser(
+            $damageReport->reporter,
+            'Perbaikan Selesai',
+            "Kerusakan di {$damageReport->room?->name} telah selesai diperbaiki",
+            route('pengguna.damage-reports.show', $damageReport),
+            'check-check',
+            'green'
+        );
+
+        // Notifikasi ke Kepala Sekolah
+        NotificationHelper::toRole(
+            UserRole::KEPALA_SEKOLAH,
+            'Perbaikan Selesai',
+            "Laporan {$damageReport->report_code} telah selesai diperbaiki",
+            route('kepala.damage-reports.show', $damageReport),
+            'check-check',
+            'green'
+        );
     }
 
     public function destroy(RepairReport $repair): RedirectResponse

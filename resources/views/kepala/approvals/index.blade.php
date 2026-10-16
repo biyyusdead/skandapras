@@ -21,6 +21,7 @@
                         <tr class="text-left text-xs uppercase tracking-wider text-surface-500 bg-surface-50/80 border-b border-surface-200/70">
                             <th class="px-4 py-3 font-medium">Kode</th>
                             <th class="px-4 py-3 font-medium">Ruangan</th>
+                            <th class="px-4 py-3 font-medium">Kategori</th>
                             <th class="px-4 py-3 font-medium">Pelapor</th>
                             <th class="px-4 py-3 font-medium">Tanggal</th>
                             <th class="px-4 py-3 font-medium text-right w-24">Aksi</th>
@@ -31,7 +32,17 @@
                             <tr class="hover:bg-surface-50/60 transition-colors duration-150">
                                 <td class="px-4 py-3 font-mono text-xs text-surface-700">{{ $report->report_code }}</td>
                                 <td class="px-4 py-3 text-surface-700">{{ $report->room->name }}</td>
-                                <td class="px-4 py-3 text-surface-600 text-xs">{{ $report->reporter?->name ?? 'Pengunjung' }}</td>
+                                <td class="px-4 py-3">
+                                    @if ($report->damage_category)
+                                        <x-ui.badge :color="$report->damage_category->color()" :dot="true">{{ $report->damage_category->label() }}</x-ui.badge>
+                                    @else
+                                        <span class="text-xs text-surface-500">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-surface-600 text-xs">
+                                    <div class="font-medium text-surface-800">{{ $report->displayName() }}</div>
+                                    <div class="text-[11px] text-surface-500">{{ $report->reporter_type?->label() ?? 'Umum' }}</div>
+                                </td>
                                 <td class="px-4 py-3 text-surface-500 text-xs">{{ $report->reported_at?->format('d M Y') }}</td>
                                 <td class="px-4 py-3 text-right">
                                     <x-ui.table-action :href="route('kepala.damage-reports.show', $report)" icon="arrow-right" title="Review" />

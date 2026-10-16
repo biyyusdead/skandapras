@@ -28,7 +28,7 @@ return new class extends Migration
 
             // Status bahasa Inggris sesuai requirement tambahan
             $table->enum('status', ['ready', 'in_progress', 'completed'])
-                  ->default('ready');
+                ->default('ready');
 
             $table->text('notes')->nullable();
 

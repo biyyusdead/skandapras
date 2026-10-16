@@ -16,7 +16,7 @@ use Illuminate\View\View;
 
 class RoomController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function bulkAction(Request $request): RedirectResponse
     {
@@ -34,7 +34,7 @@ class RoomController extends Controller
             ->withCount(['items', 'roomUsers'])
             ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                 $q->where('name', 'like', "%{$s}%")
-                  ->orWhere('code', 'like', "%{$s}%");
+                    ->orWhere('code', 'like', "%{$s}%");
             }))
             ->when($request->condition, fn ($q, $c) => $q->where('condition', $c))
             ->when($request->status !== null && $request->status !== '', fn ($q) => $q->where('is_active', $request->status === '1'))
@@ -43,7 +43,7 @@ class RoomController extends Controller
             ->withQueryString();
 
         return view('waka.rooms.index', [
-            'rooms'      => $rooms,
+            'rooms' => $rooms,
             'conditions' => RoomCondition::cases(),
         ]);
     }
@@ -52,7 +52,7 @@ class RoomController extends Controller
     {
         return view('waka.rooms.create', [
             'conditions' => RoomCondition::cases(),
-            'users'      => User::whereIn('role', ['pengguna_ruangan'])->active()->orderBy('name')->get(['id', 'name']),
+            'users' => User::whereIn('role', ['pengguna_ruangan'])->active()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -97,9 +97,9 @@ class RoomController extends Controller
     public function edit(Room $room): View
     {
         return view('waka.rooms.edit', [
-            'room'       => $room->load('roomUsers'),
+            'room' => $room->load('roomUsers'),
             'conditions' => RoomCondition::cases(),
-            'users'      => User::whereIn('role', ['pengguna_ruangan'])->active()->orderBy('name')->get(['id', 'name']),
+            'users' => User::whereIn('role', ['pengguna_ruangan'])->active()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -134,8 +134,12 @@ class RoomController extends Controller
     {
         $name = $room->name;
 
-        if ($room->photo) Storage::disk('public')->delete($room->photo);
-        if ($room->panorama_file) Storage::disk('public')->delete($room->panorama_file);
+        if ($room->photo) {
+            Storage::disk('public')->delete($room->photo);
+        }
+        if ($room->panorama_file) {
+            Storage::disk('public')->delete($room->panorama_file);
+        }
         $room->delete();
 
         $this->logActivity('delete', 'rooms', "Menghapus ruangan: {$name}");
@@ -146,45 +150,45 @@ class RoomController extends Controller
     protected function validateRoom(Request $request, ?int $ignoreId = null): array
     {
         $validated = $request->validate([
-            'name'         => ['required', 'string', 'max:255'],
-            'code'         => ['required', 'string', 'max:30', Rule::unique('rooms', 'code')->ignore($ignoreId)],
-            'floor'        => ['nullable', 'string', 'max:20'],
-            'capacity'     => ['nullable', 'integer', 'min:0'],
-            'description'  => ['nullable', 'string'],
-            'condition'    => ['required', Rule::enum(RoomCondition::class)],
+            'name' => ['required', 'string', 'max:255'],
+            'code' => ['required', 'string', 'max:30', Rule::unique('rooms', 'code')->ignore($ignoreId)],
+            'floor' => ['nullable', 'string', 'max:20'],
+            'capacity' => ['nullable', 'integer', 'min:0'],
+            'description' => ['nullable', 'string'],
+            'condition' => ['required', Rule::enum(RoomCondition::class)],
             'panorama_url' => ['nullable', 'string', 'max:1000'],
-            'panorama_file'=> ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:20480'],
-            'photo'        => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
-            'is_active'    => ['boolean'],
-            'users'        => ['nullable', 'array'],
-            'users.*'      => ['exists:users,id'],
+            'panorama_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:20480'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
+            'is_active' => ['boolean'],
+            'users' => ['nullable', 'array'],
+            'users.*' => ['exists:users,id'],
 
             // Peta 2D
-            'map_x'     => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'map_y'     => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'map_x' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'map_y' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'map_floor' => ['nullable', 'string', 'max:10'],
 
             // Model 3D
-            'model_3d_x'       => ['nullable', 'numeric', 'min:0', 'max:2000'],
-            'model_3d_y'       => ['nullable', 'numeric', 'min:0', 'max:1200'],
-            'model_3d_w'       => ['nullable', 'numeric', 'min:1', 'max:500'],
-            'model_3d_h'       => ['nullable', 'numeric', 'min:1', 'max:500'],
-            'model_3d_height'  => ['nullable', 'numeric', 'min:0.5', 'max:50'],
-            'model_3d_shape'   => ['nullable', Rule::in(['pitched', 'flat', 'dome', 'cylinder'])],
-            'model_3d_color'   => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'model_3d_x' => ['nullable', 'numeric', 'min:0', 'max:2000'],
+            'model_3d_y' => ['nullable', 'numeric', 'min:0', 'max:1200'],
+            'model_3d_w' => ['nullable', 'numeric', 'min:1', 'max:500'],
+            'model_3d_h' => ['nullable', 'numeric', 'min:1', 'max:500'],
+            'model_3d_height' => ['nullable', 'numeric', 'min:0.5', 'max:50'],
+            'model_3d_shape' => ['nullable', Rule::in(['pitched', 'flat', 'dome', 'cylinder'])],
+            'model_3d_color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'model_3d_visible' => ['boolean'],
         ]);
 
-        $validated['is_active']        = $request->boolean('is_active');
+        $validated['is_active'] = $request->boolean('is_active');
         $validated['model_3d_visible'] = $request->boolean('model_3d_visible');
 
         // Default untuk kolom 3D kalau user isi X & Y tapi W/H/Height kosong
-        if (!empty($validated['model_3d_x']) && !empty($validated['model_3d_y'])) {
-            $validated['model_3d_w']      = $validated['model_3d_w']      ?? 90;
-            $validated['model_3d_h']      = $validated['model_3d_h']      ?? 52;
+        if (! empty($validated['model_3d_x']) && ! empty($validated['model_3d_y'])) {
+            $validated['model_3d_w'] = $validated['model_3d_w'] ?? 90;
+            $validated['model_3d_h'] = $validated['model_3d_h'] ?? 52;
             $validated['model_3d_height'] = $validated['model_3d_height'] ?? 3;
-            $validated['model_3d_shape']  = $validated['model_3d_shape']  ?? 'pitched';
-            $validated['model_3d_color']  = $validated['model_3d_color']  ?? '#7fa8ee';
+            $validated['model_3d_shape'] = $validated['model_3d_shape'] ?? 'pitched';
+            $validated['model_3d_color'] = $validated['model_3d_color'] ?? '#7fa8ee';
         }
 
         return $validated;

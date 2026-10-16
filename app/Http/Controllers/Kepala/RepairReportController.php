@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Kepala;
 
+use App\Enums\RepairStatus;
 use App\Http\Controllers\Controller;
 use App\Models\RepairReport;
 use Illuminate\Http\Request;
@@ -20,8 +21,8 @@ class RepairReportController extends Controller
             ->withQueryString();
 
         return view('kepala.repair-reports.index', [
-            'repairs'  => $repairs,
-            'statuses' => \App\Enums\RepairStatus::cases(),
+            'repairs' => $repairs,
+            'statuses' => RepairStatus::cases(),
         ]);
     }
 }

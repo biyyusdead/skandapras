@@ -4,15 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Extracurricular;
+use App\Traits\BulkActionable;
 use App\Traits\LogsActivity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use App\Traits\BulkActionable;
 
 class ExtracurricularController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
+
     public function bulkAction(Request $request): RedirectResponse
     {
         return $this->handleBulkAction(
@@ -43,10 +45,10 @@ class ExtracurricularController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'is_active'   => ['boolean'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 
@@ -68,10 +70,10 @@ class ExtracurricularController extends Controller
     public function update(Request $request, Extracurricular $extracurricular): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'is_active'   => ['boolean'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 
@@ -89,7 +91,7 @@ class ExtracurricularController extends Controller
     {
         $name = $extracurricular->name;
         if ($extracurricular->image) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($extracurricular->image);
+            Storage::disk('public')->delete($extracurricular->image);
         }
         $extracurricular->delete();
         $this->logActivity('delete', 'extracurriculars', "Menghapus ekstrakurikuler: {$name}");

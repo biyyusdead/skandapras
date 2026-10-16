@@ -16,7 +16,7 @@ return new class extends Migration
 
             // Status bahasa Inggris
             $table->enum('status', ['pending', 'approved', 'rejected'])
-                  ->default('pending');
+                ->default('pending');
 
             $table->text('notes')->nullable();
             $table->timestamp('approved_at')->nullable();

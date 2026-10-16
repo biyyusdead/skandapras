@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Kepala;
 
+use App\Enums\RoomCondition;
 use App\Http\Controllers\Controller;
 use App\Models\Room;
 use Illuminate\Http\Request;
@@ -22,17 +23,17 @@ class RoomController extends Controller
 
         // Stat
         $stats = [
-            'total'        => Room::count(),
-            'baik'         => Room::where('condition', 'baik')->count(),
+            'total' => Room::count(),
+            'baik' => Room::where('condition', 'baik')->count(),
             'rusak_ringan' => Room::where('condition', 'rusak_ringan')->count(),
-            'rusak_berat'  => Room::where('condition', 'rusak_berat')->count(),
-            'avg_score'    => round(Room::avg('health_score') ?? 0),
+            'rusak_berat' => Room::where('condition', 'rusak_berat')->count(),
+            'avg_score' => round(Room::avg('health_score') ?? 0),
         ];
 
         return view('kepala.rooms.index', [
-            'rooms'      => $rooms,
-            'stats'      => $stats,
-            'conditions' => \App\Enums\RoomCondition::cases(),
+            'rooms' => $rooms,
+            'stats' => $stats,
+            'conditions' => RoomCondition::cases(),
         ]);
     }
 

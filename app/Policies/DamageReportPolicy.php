@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\DamageReportStatus;
 use App\Models\DamageReport;
 use App\Models\User;
 
@@ -56,7 +57,7 @@ class DamageReportPolicy
         }
 
         return $report->reporter_id === $user->id
-            && $report->status === \App\Enums\DamageReportStatus::MENUNGGU_VERIFIKASI;
+            && $report->status === DamageReportStatus::MENUNGGU_VERIFIKASI;
     }
 
     /**

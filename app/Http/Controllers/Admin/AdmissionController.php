@@ -12,7 +12,7 @@ use Illuminate\View\View;
 
 class AdmissionController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function bulkAction(Request $request): RedirectResponse
     {
@@ -39,13 +39,13 @@ class AdmissionController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'title'                  => ['required', 'string', 'max:255'],
-            'description'            => ['nullable', 'string'],
-            'requirements'           => ['nullable', 'string'],
-            'schedule'               => ['nullable', 'string'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'requirements' => ['nullable', 'string'],
+            'schedule' => ['nullable', 'string'],
             'additional_information' => ['nullable', 'string'],
-            'official_link'          => ['nullable', 'url', 'max:500'],
-            'is_active'              => ['boolean'],
+            'official_link' => ['nullable', 'url', 'max:500'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 
@@ -63,13 +63,13 @@ class AdmissionController extends Controller
     public function update(Request $request, Admission $admission): RedirectResponse
     {
         $validated = $request->validate([
-            'title'                  => ['required', 'string', 'max:255'],
-            'description'            => ['nullable', 'string'],
-            'requirements'           => ['nullable', 'string'],
-            'schedule'               => ['nullable', 'string'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'requirements' => ['nullable', 'string'],
+            'schedule' => ['nullable', 'string'],
             'additional_information' => ['nullable', 'string'],
-            'official_link'          => ['nullable', 'url', 'max:500'],
-            'is_active'              => ['boolean'],
+            'official_link' => ['nullable', 'url', 'max:500'],
+            'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 

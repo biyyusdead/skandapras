@@ -14,7 +14,7 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    use LogsActivity, BulkActionable;
+    use BulkActionable, LogsActivity;
 
     public function index(Request $request): View
     {
@@ -39,11 +39,11 @@ class UserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'      => ['required', 'string', 'max:255'],
-            'email'     => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password'  => ['required', 'string', 'min:6', 'confirmed'],
-            'role'      => ['required', Rule::enum(UserRole::class)],
-            'phone'     => ['nullable', 'string', 'max:20'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+            'role' => ['required', Rule::enum(UserRole::class)],
+            'phone' => ['nullable', 'string', 'max:20'],
             'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
@@ -65,16 +65,18 @@ class UserController extends Controller
     public function update(Request $request, User $user): RedirectResponse
     {
         $validated = $request->validate([
-            'name'      => ['required', 'string', 'max:255'],
-            'email'     => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'password'  => ['nullable', 'string', 'min:6', 'confirmed'],
-            'role'      => ['required', Rule::enum(UserRole::class)],
-            'phone'     => ['nullable', 'string', 'max:20'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'password' => ['nullable', 'string', 'min:6', 'confirmed'],
+            'role' => ['required', Rule::enum(UserRole::class)],
+            'phone' => ['nullable', 'string', 'max:20'],
             'is_active' => ['boolean'],
         ]);
         $validated['is_active'] = $request->boolean('is_active');
 
-        if (empty($validated['password'])) unset($validated['password']);
+        if (empty($validated['password'])) {
+            unset($validated['password']);
+        }
 
         $user->update($validated);
         $this->logActivity('update', 'users', "Memperbarui user: {$user->name}");
@@ -98,7 +100,7 @@ class UserController extends Controller
     {
         return $this->handleBulkAction(
             $request,
-            \App\Models\User::class,
+            User::class,
             'users',
             ['exclude_self' => true]
         );

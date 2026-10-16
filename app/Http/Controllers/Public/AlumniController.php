@@ -15,9 +15,9 @@ class AlumniController extends Controller
             ->when($request->search, function ($q, $s) {
                 $q->where(function ($q) use ($s) {
                     $q->where('name', 'like', "%{$s}%")
-                      ->orWhere('department', 'like', "%{$s}%")
-                      ->orWhere('achievement', 'like', "%{$s}%")
-                      ->orWhere('motto', 'like', "%{$s}%");
+                        ->orWhere('department', 'like', "%{$s}%")
+                        ->orWhere('achievement', 'like', "%{$s}%")
+                        ->orWhere('motto', 'like', "%{$s}%");
                 });
             })
             ->when($request->year, fn ($q, $y) => $q->where('graduation_year', $y))

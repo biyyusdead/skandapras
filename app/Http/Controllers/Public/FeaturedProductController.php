@@ -16,8 +16,8 @@ class FeaturedProductController extends Controller
             ->when($request->search, function ($q, $s) {
                 $q->where(function ($qq) use ($s) {
                     $qq->where('name', 'like', "%{$s}%")
-                       ->orWhere('description', 'like', "%{$s}%")
-                       ->orWhere('code', 'like', "%{$s}%");
+                        ->orWhere('description', 'like', "%{$s}%")
+                        ->orWhere('code', 'like', "%{$s}%");
                 });
             })
             ->when($request->category, fn ($q, $c) => $q->where('category', $c))

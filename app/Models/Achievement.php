@@ -26,7 +26,9 @@ class Achievement extends Model
 
     public function getImageUrlAttribute(): ?string
     {
-        if (!$this->image) return null;
+        if (! $this->image) {
+            return null;
+        }
 
         // Kalau URL full (http), langsung pakai
         if (str_starts_with($this->image, 'http')) {
@@ -34,6 +36,6 @@ class Achievement extends Model
         }
 
         // Kalau path lokal, konversi ke storage URL
-        return asset('storage/' . $this->image);
+        return asset('storage/'.$this->image);
     }
 }
